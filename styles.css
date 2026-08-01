@@ -1,0 +1,322 @@
+/* =======================================================================
+   ESTUDIO SANTI · "Santa Fe y la Argentina"
+   styles.css — tema visual, animaciones y componentes propios.
+   Tailwind (CDN) se encarga del layout; acá va todo lo que Tailwind no da:
+   variables de color, keyframes, tarjeta con volteo 3D, mapa SVG y confeti.
+   ======================================================================= */
+
+/* ----------------------------- 1. TOKENS ------------------------------ */
+:root {
+  --c-ink:        #1e1b3a;
+  --c-ink-soft:   #4b4a6a;
+  --c-primary:    #6366f1;   /* indigo  */
+  --c-primary-d:  #4f46e5;
+  --c-accent:     #f59e0b;   /* ámbar   */
+  --c-ok:         #10b981;   /* esmeralda */
+  --c-ok-soft:    #d1fae5;
+  --c-bad:        #f43f5e;   /* rosa    */
+  --c-bad-soft:   #ffe4e6;
+  --c-surface:    #ffffff;
+  --c-surface-2:  #f6f5ff;
+  --shadow-sm:    0 1px 2px rgba(30, 27, 58, .06), 0 2px 8px rgba(30, 27, 58, .06);
+  --shadow-md:    0 4px 12px rgba(30, 27, 58, .08), 0 12px 28px rgba(30, 27, 58, .10);
+  --shadow-lg:    0 10px 20px rgba(30, 27, 58, .10), 0 24px 48px rgba(30, 27, 58, .14);
+  --radius:       1.5rem;
+}
+
+/* ---------------------------- 2. BASE -------------------------------- */
+* { -webkit-tap-highlight-color: transparent; }
+
+html, body { height: 100%; }
+
+body {
+  margin: 0;
+  color: var(--c-ink);
+  font-family: 'Nunito', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background:
+    radial-gradient(1100px 620px at 12% -8%,  #dbeafe 0%, transparent 58%),
+    radial-gradient(950px  560px at 92% 4%,   #fae8ff 0%, transparent 55%),
+    radial-gradient(900px  700px at 48% 108%, #d1fae5 0%, transparent 58%),
+    #f7f7ff;
+  background-attachment: fixed;
+  overflow-x: hidden;
+}
+
+/* Scrollbar suave (WebKit) */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #cfcde8; border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: #b6b3dd; }
+
+/* Evita el zoom por doble tap en los juegos táctiles */
+.no-touch-zoom { touch-action: manipulation; }
+
+/* --------------------------- 3. PIEZAS UI ---------------------------- */
+.card {
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(99, 102, 241, .08);
+}
+
+.card-hover {
+  transition: transform .22s cubic-bezier(.34, 1.4, .64, 1), box-shadow .22s ease;
+}
+.card-hover:hover  { transform: translateY(-5px) scale(1.015); box-shadow: var(--shadow-lg); }
+.card-hover:active { transform: translateY(-1px) scale(.99); }
+
+/* Botón base */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  font-weight: 800; border-radius: 999px; padding: .7rem 1.35rem;
+  border: none; cursor: pointer; user-select: none;
+  transition: transform .14s ease, box-shadow .18s ease, background-color .18s ease, filter .18s ease;
+  box-shadow: var(--shadow-sm);
+}
+.btn:active { transform: scale(.95); }
+.btn:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
+
+.btn-primary { background: linear-gradient(135deg, var(--c-primary), var(--c-primary-d)); color: #fff; }
+.btn-primary:hover { filter: brightness(1.07); box-shadow: var(--shadow-md); }
+
+.btn-accent  { background: linear-gradient(135deg, #fbbf24, var(--c-accent)); color: #46320a; }
+.btn-accent:hover { filter: brightness(1.05); }
+
+.btn-ghost   { background: #fff; color: var(--c-ink-soft); border: 2px solid #e7e6f7; }
+.btn-ghost:hover { background: var(--c-surface-2); color: var(--c-primary-d); }
+
+/* Opción de respuesta (trivia) */
+.option {
+  width: 100%; text-align: left;
+  display: flex; align-items: center; gap: .85rem;
+  padding: .9rem 1.05rem;
+  background: #fff;
+  border: 2px solid #e9e8f8;
+  border-radius: 1.15rem;
+  font-weight: 700; color: var(--c-ink);
+  cursor: pointer;
+  transition: transform .14s ease, border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+  box-shadow: var(--shadow-sm);
+}
+.option:hover:not(:disabled) { border-color: #b9b6f5; transform: translateX(3px); }
+.option:disabled { cursor: default; }
+
+.option .badge {
+  flex: 0 0 auto;
+  width: 2rem; height: 2rem; border-radius: 999px;
+  display: grid; place-items: center;
+  background: var(--c-surface-2); color: var(--c-primary-d);
+  font-weight: 900; font-size: .9rem;
+}
+
+.option.is-ok  { background: var(--c-ok-soft);  border-color: var(--c-ok);  color: #065f46; }
+.option.is-ok .badge  { background: var(--c-ok);  color: #fff; }
+.option.is-bad { background: var(--c-bad-soft); border-color: var(--c-bad); color: #9f1239; }
+.option.is-bad .badge { background: var(--c-bad); color: #fff; }
+.option.is-dim { opacity: .45; }
+
+/* Barra de progreso */
+.bar { height: .6rem; background: #e9e8f8; border-radius: 999px; overflow: hidden; }
+.bar > i {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, var(--c-primary), #8b5cf6, var(--c-accent));
+  transition: width .45s cubic-bezier(.22, 1, .36, 1);
+}
+
+/* Barra del reloj: cambia de color según el tiempo restante */
+.bar.timer > i { background: linear-gradient(90deg, var(--c-ok), #34d399); transition: width .25s linear, background .4s ease; }
+.bar.timer.warn > i   { background: linear-gradient(90deg, #fbbf24, var(--c-accent)); }
+.bar.timer.danger > i { background: linear-gradient(90deg, #fb7185, var(--c-bad)); }
+
+/* Chips */
+.chip {
+  display: inline-flex; align-items: center; gap: .4rem;
+  padding: .25rem .7rem; border-radius: 999px;
+  background: var(--c-surface-2); color: var(--c-primary-d);
+  font-size: .72rem; font-weight: 800; letter-spacing: .02em;
+  border: 1px solid #e4e2fa;
+}
+
+/* --------------------------- 4. ANIMACIONES -------------------------- */
+@keyframes pop      { 0% { transform: scale(.86); opacity: 0 } 60% { transform: scale(1.04) } 100% { transform: scale(1); opacity: 1 } }
+@keyframes fadeUp   { from { opacity: 0; transform: translateY(14px) } to { opacity: 1; transform: none } }
+@keyframes shakeX   { 0%,100% { transform: translateX(0) } 20% { transform: translateX(-9px) } 40% { transform: translateX(8px) } 60% { transform: translateX(-5px) } 80% { transform: translateX(4px) } }
+@keyframes glowOk   { 0% { box-shadow: 0 0 0 0 rgba(16,185,129,.55) } 100% { box-shadow: 0 0 0 22px rgba(16,185,129,0) } }
+@keyframes floaty   { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-7px) } }
+@keyframes spinSlow { to { transform: rotate(360deg) } }
+@keyframes riseFade { 0% { opacity: 0; transform: translateY(10px) scale(.9) } 25% { opacity: 1; transform: none } 100% { opacity: 0; transform: translateY(-42px) scale(1.06) } }
+@keyframes flashOk  { 0% { opacity: 0 } 22% { opacity: .5 } 100% { opacity: 0 } }
+@keyframes dropIn   { from { transform: translateY(-120%) rotate(-3deg); opacity: 0 } to { transform: none; opacity: 1 } }
+@keyframes dashFlow { to { stroke-dashoffset: -22; } }
+
+.anim-pop     { animation: pop .34s cubic-bezier(.34,1.5,.64,1) both; }
+.anim-fadeup  { animation: fadeUp .38s ease both; }
+.anim-shake   { animation: shakeX .42s ease; }
+.anim-glow    { animation: glowOk .7s ease-out; }
+.anim-floaty  { animation: floaty 3.4s ease-in-out infinite; }
+.anim-drop    { animation: dropIn .38s cubic-bezier(.22,1.2,.36,1) both; }
+
+/* Retardos escalonados para listas */
+.stagger > * { animation: fadeUp .34s ease both; }
+.stagger > *:nth-child(1) { animation-delay: .03s }
+.stagger > *:nth-child(2) { animation-delay: .08s }
+.stagger > *:nth-child(3) { animation-delay: .13s }
+.stagger > *:nth-child(4) { animation-delay: .18s }
+.stagger > *:nth-child(5) { animation-delay: .23s }
+.stagger > *:nth-child(6) { animation-delay: .28s }
+
+/* Destello verde a pantalla completa cuando acierta */
+.flash-ok {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, rgba(16,185,129,.32), transparent 65%);
+  animation: flashOk .75s ease-out forwards;
+}
+/* Marco rojo suave cuando se equivoca (nunca agresivo) */
+.flash-bad {
+  position: fixed; inset: 0; z-index: 60; pointer-events: none;
+  box-shadow: inset 0 0 0 8px rgba(244,63,94,.28);
+  animation: flashOk .8s ease-out forwards;
+}
+
+/* Puntos que suben ("+120") */
+.floating-score {
+  position: fixed; z-index: 70; pointer-events: none;
+  font-weight: 900; font-size: 1.6rem; color: var(--c-ok);
+  text-shadow: 0 2px 8px rgba(255,255,255,.9);
+  animation: riseFade 1.05s ease-out forwards;
+}
+
+.confetti-canvas { position: fixed; inset: 0; z-index: 80; pointer-events: none; }
+
+/* --------------------- 5. FLASHCARDS (volteo 3D) --------------------- */
+.flip { perspective: 1400px; cursor: pointer; }
+.flip-inner {
+  position: relative; width: 100%; height: 100%;
+  transition: transform .62s cubic-bezier(.22, 1, .36, 1);
+  transform-style: preserve-3d;
+}
+.flip.is-flipped .flip-inner { transform: rotateY(180deg); }
+.flip-face {
+  position: absolute; inset: 0;
+  -webkit-backface-visibility: hidden; backface-visibility: hidden;
+  border-radius: var(--radius);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 1.5rem 1.35rem; text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+.flip-front { background: linear-gradient(150deg, #ffffff, #f3f2ff); border: 1px solid #e6e4fb; }
+.flip-back  { background: linear-gradient(150deg, #4f46e5, #7c3aed); color: #fff; transform: rotateY(180deg); }
+
+/* ------------------------ 6. MAPA INTERACTIVO ------------------------ */
+.map-wrap { touch-action: manipulation; }
+
+.prov {
+  fill: #e2e6f3;
+  stroke: #ffffff;
+  stroke-width: 2.6;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transition: fill .2s ease;
+}
+.prov:hover      { fill: #cdd4ee; }
+.prov.is-picked  { fill: #a5b4fc; }
+.prov.is-ok      { fill: var(--c-ok); }
+.prov.is-bad     { fill: #fda4af; }
+.prov.is-reveal  { fill: #fcd34d; }
+.prov.is-locked  { cursor: default; }
+
+.prov-label {
+  font-weight: 800; fill: #46456b; paint-order: stroke;
+  stroke: rgba(255, 255, 255, .75); stroke-width: 3px; stroke-linejoin: round;
+  pointer-events: none; text-anchor: middle; user-select: none;
+}
+.prov-label.on-ok { fill: #ffffff; stroke: rgba(4, 90, 66, .45); }
+
+/* Línea guía para etiquetas que caen fuera de su provincia (CABA) */
+.leader { stroke: #b6bccd; stroke-width: 2; pointer-events: none; }
+
+/* Letras de rumbo (N / S / E / O) en el margen del mapa */
+.rumbo {
+  font-size: 30px; font-weight: 900; fill: #a8b0c4;
+  text-anchor: middle; dominant-baseline: middle;
+  pointer-events: none; user-select: none;
+}
+
+.river { fill: none; stroke: #38bdf8; stroke-width: 5; stroke-linecap: round; opacity: .8; }
+
+.city { cursor: pointer; }
+.city .dot { fill: #f43f5e; stroke: #fff; stroke-width: 3.5; transition: fill .2s ease; }
+.city:hover .dot { fill: #e11d48; }
+.city.is-ok  .dot { fill: var(--c-ok); }
+.city.is-bad .dot { fill: #fb7185; }
+.city.is-reveal .dot { fill: #f59e0b; }
+.city .city-label {
+  font-size: 19px; font-weight: 800; fill: #3f3d61; pointer-events: none;
+  paint-order: stroke; stroke: rgba(255, 255, 255, .85); stroke-width: 4px; stroke-linejoin: round;
+}
+
+/* ------------------- 7. UNIR CON FLECHAS (arrastre) ------------------ */
+.match-area { position: relative; touch-action: none; }
+
+.match-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+.match-link      { fill: none; stroke: var(--c-ok); stroke-width: 3.4; stroke-linecap: round; }
+.match-link-live { fill: none; stroke: var(--c-primary); stroke-width: 3.4; stroke-linecap: round;
+                   stroke-dasharray: 9 9; animation: dashFlow .5s linear infinite; }
+
+.tile {
+  position: relative; z-index: 6;
+  background: #fff; border: 2px solid #e7e5fa; border-radius: 1.1rem;
+  padding: .7rem .9rem; font-weight: 700; color: var(--c-ink);
+  cursor: grab; user-select: none;
+  transition: transform .16s ease, border-color .2s ease, background-color .2s ease, box-shadow .2s ease, opacity .25s ease;
+  box-shadow: var(--shadow-sm);
+}
+.tile:hover      { border-color: #b9b6f5; }
+.tile.is-active  { border-color: var(--c-primary); background: #eef2ff; transform: scale(1.03); box-shadow: var(--shadow-md); }
+.tile.is-target  { border-color: var(--c-accent); background: #fffbeb; }
+.tile.is-done    { border-color: var(--c-ok); background: var(--c-ok-soft); color: #065f46; cursor: default; }
+.tile.is-wrong   { border-color: var(--c-bad); background: var(--c-bad-soft); }
+.tile.is-concept { font-weight: 900; }
+
+.tile-dot {
+  position: absolute; top: 50%; width: .7rem; height: .7rem;
+  border-radius: 999px; background: #cbc9ee; transform: translateY(-50%);
+}
+.tile-dot.right { right: -.42rem; }
+.tile-dot.left  { left: -.42rem; }
+.tile.is-done .tile-dot { background: var(--c-ok); }
+
+/* ------------------ 8. CAZADOR DE PODERES (arcade) ------------------ */
+.bucket {
+  border-radius: 1.35rem; border: 3px dashed transparent;
+  padding: .9rem .6rem; text-align: center;
+  transition: transform .16s ease, box-shadow .2s ease, border-color .2s ease, background-color .2s ease;
+  cursor: pointer; user-select: none;
+}
+.bucket:active { transform: scale(.96); }
+.bucket.hot    { border-color: #fff; transform: scale(1.05); box-shadow: var(--shadow-lg); }
+.bucket-ejecutivo   { background: linear-gradient(150deg, #fbbf24, #f59e0b); color: #4a3208; }
+.bucket-legislativo { background: linear-gradient(150deg, #818cf8, #6366f1); color: #fff; }
+.bucket-judicial    { background: linear-gradient(150deg, #34d399, #10b981); color: #05513a; }
+
+.life-heart { transition: transform .25s ease, opacity .25s ease; }
+.life-heart.gone { opacity: .25; transform: scale(.8); }
+
+/* Tarjeta que "cae" en el arcade */
+.falling-card {
+  background: #fff; border-radius: 1.25rem; border: 2px solid #e7e5fa;
+  box-shadow: var(--shadow-lg); padding: 1.1rem 1rem; text-align: center;
+  font-weight: 900;
+}
+
+/* --------------------------- 9. ESTRELLAS ---------------------------- */
+.star     { color: #dcdaf0; transition: color .35s ease, transform .35s ease; }
+.star.lit { color: var(--c-accent); transform: scale(1.16); }
+
+/* -------------------------- 10. ACCESIBILIDAD ------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .001ms !important;
+  }
+}
