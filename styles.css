@@ -257,9 +257,16 @@ body {
 /* ------------------- 7. UNIR CON FLECHAS (arrastre) ------------------ */
 .match-area { position: relative; touch-action: none; }
 
-.match-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-.match-link      { fill: none; stroke: var(--c-ok); stroke-width: 3.4; stroke-linecap: round; }
-.match-link-live { fill: none; stroke: var(--c-primary); stroke-width: 3.4; stroke-linecap: round;
+/* Las flechas van POR ENCIMA de las fichas (z-index alto) para que nunca se
+   vean cortadas. No bloquean el toque porque tienen pointer-events: none. */
+.match-svg {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; z-index: 20; overflow: visible;
+}
+/* Halo blanco: hace que la línea se lea sobre cualquier fondo */
+.match-halo      { fill: none; stroke: #fff; stroke-width: 8; stroke-linecap: round; opacity: .95; }
+.match-link      { fill: none; stroke-width: 3.6; stroke-linecap: round; }
+.match-link-live { fill: none; stroke: var(--c-primary); stroke-width: 3.6; stroke-linecap: round;
                    stroke-dasharray: 9 9; animation: dashFlow .5s linear infinite; }
 
 .tile {
@@ -267,23 +274,40 @@ body {
   background: #fff; border: 2px solid #e7e5fa; border-radius: 1.1rem;
   padding: .7rem .9rem; font-weight: 700; color: var(--c-ink);
   cursor: grab; user-select: none;
-  transition: transform .16s ease, border-color .2s ease, background-color .2s ease, box-shadow .2s ease, opacity .25s ease;
+  transition: transform .16s ease, border-color .2s ease, background-color .2s ease, box-shadow .2s ease;
   box-shadow: var(--shadow-sm);
 }
 .tile:hover      { border-color: #b9b6f5; }
 .tile.is-active  { border-color: var(--c-primary); background: #eef2ff; transform: scale(1.03); box-shadow: var(--shadow-md); }
 .tile.is-target  { border-color: var(--c-accent); background: #fffbeb; }
-.tile.is-done    { border-color: var(--c-ok); background: var(--c-ok-soft); color: #065f46; cursor: default; }
 .tile.is-wrong   { border-color: var(--c-bad); background: var(--c-bad-soft); }
 .tile.is-concept { font-weight: 900; }
+/* El par resuelto toma su color por estilo inline; acá sólo el cursor. */
+.tile.is-done    { cursor: default; }
 
+/* Puntitos del borde: son el punto de salida y de llegada de las flechas */
 .tile-dot {
-  position: absolute; top: 50%; width: .7rem; height: .7rem;
-  border-radius: 999px; background: #cbc9ee; transform: translateY(-50%);
+  position: absolute; top: 50%; width: .72rem; height: .72rem;
+  border-radius: 999px; background: #c7c4ec; transform: translateY(-50%);
+  box-shadow: 0 0 0 2.5px #fff;
+  transition: background-color .2s ease, transform .18s ease;
 }
-.tile-dot.right { right: -.42rem; }
-.tile-dot.left  { left: -.42rem; }
-.tile.is-done .tile-dot { background: var(--c-ok); }
+.tile-dot.right { right: -.36rem; }
+.tile-dot.left  { left: -.36rem; }
+.tile.is-active .tile-dot { background: var(--c-primary); transform: translateY(-50%) scale(1.35); }
+.tile.is-target .tile-dot { background: var(--c-accent); }
+
+/* Número del par: se repite en las dos fichas unidas */
+.pair-num {
+  position: absolute; top: -.5rem;
+  width: 1.35rem; height: 1.35rem; border-radius: 999px;
+  display: grid; place-items: center;
+  color: #fff; font-size: .72rem; font-weight: 900; line-height: 1;
+  box-shadow: 0 0 0 2.5px #fff, var(--shadow-sm);
+  z-index: 25;
+}
+.pair-num.left  { left: -.5rem; }
+.pair-num.right { right: -.5rem; }
 
 /* ------------------ 8. CAZADOR DE PODERES (arcade) ------------------ */
 .bucket {

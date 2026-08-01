@@ -26,7 +26,7 @@ npx serve .
 |---|---|
 | 🧠 **Trivia contrarreloj** | 10 preguntas al azar de un banco de 46. Reloj de 20 s, racha con multiplicador y explicación después de cada respuesta. |
 | 🗺️ **Mapa de Santa Fe** | Mapa real del norte y centro del país (19 jurisdicciones). Límites por rumbo, regiones Litoral y Centro, la capital y Rosario. Hay desafíos de una sola respuesta y de varias. |
-| 🔗 **Unir con flechas** | 4 rondas al azar de 6. Se arrastra el concepto hasta su definición (o se toca uno y después el otro) y queda dibujada la flecha. |
+| 🔗 **Unir con flechas** | 4 rondas al azar de 6. Se arrastra desde el punto del concepto hasta su definición (o se toca uno y después el otro). Cada par resuelto queda con su propio **color y número** en las dos fichas, y la flecha se dibuja por encima con halo blanco, así se lee incluso cuando varias se cruzan. |
 | 🃏 **Flashcards** | 26 tarjetas con volteo 3D, agrupadas en 5 mazos. Se pueden marcar como "ya la sé" y queda guardado. |
 | ⚡ **Cazador de Poderes** | Arcade: caen funciones, autoridades y sedes, y hay que tirarlas al balde Ejecutivo / Legislativo / Judicial. 3 vidas, combos y reloj de 9 s por tarjeta. |
 

@@ -518,7 +518,17 @@
 
   /* ==================================================================
      4 · JUEGO 3 · UNIR CON FLECHAS (arrastrar y soltar)
+
+     Claves de legibilidad:
+       · las flechas se dibujan POR ENCIMA de las fichas (con halo blanco);
+       · salen y llegan exactamente a los puntitos del borde, nunca del centro;
+       · cada par resuelto recibe un color y un número propios, que se repiten
+         en las dos fichas, así se entiende de un vistazo qué va con qué.
      ================================================================== */
+
+  /* Colores de los pares (uno por unión, en orden de acierto). */
+  const PAIR_COLORS = ['#10b981', '#6366f1', '#f59e0b', '#ec4899', '#0ea5e9', '#8b5cf6'];
+
   function MatchGame({ onFinish, onExit }) {
     const [rounds] = useState(() => APP.pick(APP.MATCH_ROUNDS, 4));
     const [r, setR] = useState(0);
@@ -527,10 +537,10 @@
 
     const [left, setLeft]   = useState(() => APP.shuffle(rounds[0].pairs));
     const [right, setRight] = useState(() => APP.shuffle(rounds[0].pairs));
-    const [matched, setMatched] = useState({});
-    const [active, setActive]   = useState(null);   // { side:'a'|'b', id }
-    const [drag, setDrag]       = useState(null);   // punto en coordenadas del área
-    const [wrong, setWrong]     = useState(null);   // { a, b }
+    const [matched, setMatched] = useState({});   // id -> número de par (1..n)
+    const [active, setActive]   = useState(null); // { side:'a'|'b', id }
+    const [drag, setDrag]       = useState(null); // punto en coordenadas del área
+    const [wrong, setWrong]     = useState(null); // { a, b }
     const [links, setLinks]     = useState([]);
     const [score, setScore]     = useState(0);
     const [hits, setHits]       = useState(0);
@@ -540,7 +550,11 @@
     const areaRef = useRef(null);
     const tiles   = useRef({});
 
-    const roundDone = round && Object.keys(matched).length === round.pairs.length;
+    const doneCount = Object.keys(matched).length;
+    const roundDone = round && doneCount === round.pairs.length;
+
+    /** Color asignado a un par ya resuelto. */
+    const colorOf = (id) => PAIR_COLORS[(matched[id] - 1) % PAIR_COLORS.length];
 
     /* Nueva ronda */
     useEffect(() => {
@@ -550,25 +564,26 @@
       tiles.current = {};
     }, [r]);
 
-    /* --- Medición de las flechas ya resueltas ------------------------ */
+    /* ---------------- Anclajes: los puntitos del borde ----------------
+       Los conceptos salen por su punto derecho y las definiciones reciben
+       por su punto izquierdo. Nunca por el centro de la ficha. */
+    function anchorOf(side, id) {
+      const area = areaRef.current, el = tiles.current[side + id];
+      if (!area || !el) return null;
+      const ar = area.getBoundingClientRect(), rr = el.getBoundingClientRect();
+      return {
+        x: (side === 'a' ? rr.right : rr.left) - ar.left,
+        y: rr.top + rr.height / 2 - ar.top
+      };
+    }
+
+    /* Recalcula las flechas ya resueltas. */
     const measure = useCallback(() => {
-      const area = areaRef.current;
-      if (!area) return;
-      const ar = area.getBoundingClientRect();
+      if (!areaRef.current) return;
       const out = [];
       Object.keys(matched).forEach((id) => {
-        const a = tiles.current['a' + id], b = tiles.current['b' + id];
-        if (!a || !b) return;
-        const ra = a.getBoundingClientRect(), rb = b.getBoundingClientRect();
-        let p1, p2;
-        if (ra.right <= rb.left + 6) {           // columnas lado a lado
-          p1 = { x: ra.right - ar.left, y: ra.top + ra.height / 2 - ar.top };
-          p2 = { x: rb.left - ar.left,  y: rb.top + rb.height / 2 - ar.top };
-        } else {                                  // apiladas (celular)
-          p1 = { x: ra.left + ra.width / 2 - ar.left, y: ra.bottom - ar.top };
-          p2 = { x: rb.left + rb.width / 2 - ar.left, y: rb.top - ar.top };
-        }
-        out.push({ id, p1, p2 });
+        const p1 = anchorOf('a', id), p2 = anchorOf('b', id);
+        if (p1 && p2) out.push({ id, p1, p2, n: matched[id] });
       });
       setLinks(out);
     }, [matched]);
@@ -581,7 +596,7 @@
       return () => { window.removeEventListener('resize', h); window.removeEventListener('scroll', h, true); };
     }, [measure]);
 
-    /* --- Interacción ------------------------------------------------- */
+    /* --------------------------- Interacción --------------------------- */
     function toArea(e) {
       const ar = areaRef.current.getBoundingClientRect();
       return { x: e.clientX - ar.left, y: e.clientY - ar.top };
@@ -589,7 +604,7 @@
 
     function connect(aId, bId, e) {
       if (aId === bId) {
-        setMatched((m) => Object.assign({}, m, { [aId]: true }));
+        setMatched((m) => Object.assign({}, m, { [aId]: Object.keys(m).length + 1 }));
         setScore((s) => s + 100);
         setHits((h) => h + 1);
         fx.good({ x: e.clientX, y: e.clientY }, 100);
@@ -623,9 +638,9 @@
         setDrag(null);
         const el = document.elementFromPoint(e.clientX, e.clientY);
         const t  = el && el.closest ? el.closest('[data-mid]') : null;
-        if (!t) return;                                // sin destino: queda seleccionado
+        if (!t) return;                                // sin destino: queda elegido
         const side = t.getAttribute('data-side'), id = t.getAttribute('data-mid');
-        if (side === active.side) return;              // mismo lado: sigue seleccionado
+        if (side === active.side) return;              // mismo lado: sigue elegido
         const aId = side === 'a' ? id : active.id;
         const bId = side === 'a' ? active.id : id;
         connect(aId, bId, e);
@@ -642,10 +657,7 @@
       };
     }, [active, matched, roundDone]);
 
-    /* Ronda completa */
-    useEffect(() => {
-      if (roundDone) { APP.confetti(120); APP.sfx.play('win'); }
-    }, [roundDone]);
+    useEffect(() => { if (roundDone) { APP.confetti(120); APP.sfx.play('win'); } }, [roundDone]);
 
     function nextRound() {
       APP.sfx.play('click');
@@ -660,20 +672,17 @@
         onExit={() => onFinish({ score, correct: hits, total: TOTAL })} />;
     }
 
-    /* Punta de flecha + curva suave entre dos puntos */
+    /* Curva suave entre dos puntos, con salida y llegada horizontales. */
     function pathOf(p1, p2) {
-      const mx = (p1.x + p2.x) / 2;
-      return 'M ' + p1.x + ',' + p1.y + ' C ' + mx + ',' + p1.y + ' ' + mx + ',' + p2.y + ' ' + p2.x + ',' + p2.y;
+      const s = p2.x >= p1.x ? 1 : -1;
+      const dx = Math.max(26, Math.abs(p2.x - p1.x) * 0.45) * s;
+      return 'M ' + p1.x + ',' + p1.y +
+             ' C ' + (p1.x + dx) + ',' + p1.y +
+             ' '   + (p2.x - dx) + ',' + p2.y +
+             ' '   + p2.x + ',' + p2.y;
     }
 
-    const activeAnchor = (() => {
-      if (!active || !drag || !areaRef.current) return null;
-      const el = tiles.current[active.side + active.id];
-      if (!el) return null;
-      const ar = areaRef.current.getBoundingClientRect();
-      const rr = el.getBoundingClientRect();
-      return { x: rr.left + rr.width / 2 - ar.left, y: rr.top + rr.height / 2 - ar.top };
-    })();
+    const liveFrom = active ? anchorOf(active.side, active.id) : null;
 
     function tileCls(side, p) {
       let c = 'tile' + (side === 'a' ? ' is-concept' : '');
@@ -682,6 +691,13 @@
       else if (active && active.side !== side) c += ' is-target';
       if (wrong && ((side === 'a' && wrong.a === p.id) || (side === 'b' && wrong.b === p.id))) c += ' is-wrong anim-shake';
       return c;
+    }
+
+    /** Estilo con el color del par cuando la ficha ya está unida. */
+    function tileStyle(p) {
+      if (!matched[p.id]) return undefined;
+      const c = colorOf(p.id);
+      return { borderColor: c, background: c + '16', color: '#334155' };
     }
 
     return (
@@ -693,56 +709,87 @@
             <p className="text-[10px] uppercase font-bold text-slate-400">puntos</p>
           </div>} />
 
-        <div className="card p-4 sm:p-6 anim-fadeup">
-          <p className="text-xs sm:text-sm text-slate-500 mb-4">
-            <i className="fa-solid fa-hand-pointer mr-1 text-emerald-500" />
-            Arrastrá desde un concepto hasta su definición (o tocá uno y después el otro).
-          </p>
+        <div className="card p-3 sm:p-6 anim-fadeup">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <p className="text-xs sm:text-sm text-slate-500">
+              <i className="fa-solid fa-hand-pointer mr-1 text-emerald-500" />
+              Arrastrá desde el <b>punto</b> de un concepto hasta su definición.
+            </p>
+            <span className="chip shrink-0">{doneCount}/{round.pairs.length} unidos</span>
+          </div>
 
-          <div ref={areaRef} className="match-area grid grid-cols-1 sm:grid-cols-2 gap-x-14 gap-y-2.5">
-            {/* Flechas */}
+          <div ref={areaRef} className="match-area grid gap-y-2.5 gap-x-8 sm:gap-x-16"
+               style={{ gridTemplateColumns: 'minmax(0,0.82fr) minmax(0,1.18fr)' }}>
+
+            {/* --- Flechas: van ARRIBA de las fichas, con halo blanco --- */}
             <svg className="match-svg">
               <defs>
-                <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
-                  <path d="M0,0 L9,4.5 L0,9 z" fill="var(--c-ok)" />
-                </marker>
-                <marker id="ahLive" markerWidth="9" markerHeight="9" refX="7" refY="4.5" orient="auto">
-                  <path d="M0,0 L9,4.5 L0,9 z" fill="var(--c-primary)" />
+                {PAIR_COLORS.map((c, k) => (
+                  <marker key={k} id={'ah' + k} markerWidth="4.6" markerHeight="4.6" refX="3.8" refY="2.3"
+                          orient="auto" markerUnits="strokeWidth">
+                    <path d="M0,0 L4.6,2.3 L0,4.6 z" fill={c} />
+                  </marker>
+                ))}
+                <marker id="ahLive" markerWidth="4.6" markerHeight="4.6" refX="3.8" refY="2.3"
+                        orient="auto" markerUnits="strokeWidth">
+                  <path d="M0,0 L4.6,2.3 L0,4.6 z" fill="var(--c-primary)" />
                 </marker>
               </defs>
-              {links.map((l) => (
-                <path key={l.id} d={pathOf(l.p1, l.p2)} className="match-link" markerEnd="url(#ah)" />
-              ))}
-              {activeAnchor && drag && (
-                <path d={pathOf(activeAnchor, drag)} className="match-link-live" markerEnd="url(#ahLive)" />
+
+              {/* halos: se dibujan todos primero, para que ninguna línea de
+                  color quede tapada por el halo de otra */}
+              {links.map((l) => <path key={'h' + l.id} d={pathOf(l.p1, l.p2)} className="match-halo" />)}
+              {liveFrom && drag && <path d={pathOf(liveFrom, drag)} className="match-halo" />}
+
+              {links.map((l) => {
+                const c = PAIR_COLORS[(l.n - 1) % PAIR_COLORS.length];
+                return (
+                  <g key={l.id}>
+                    <path d={pathOf(l.p1, l.p2)} className="match-link"
+                          stroke={c} markerEnd={'url(#ah' + ((l.n - 1) % PAIR_COLORS.length) + ')'} />
+                    <circle cx={l.p1.x} cy={l.p1.y} r="4.5" fill={c} />
+                  </g>
+                );
+              })}
+
+              {liveFrom && drag && (
+                <g>
+                  <path d={pathOf(liveFrom, drag)} className="match-link-live" markerEnd="url(#ahLive)" />
+                  <circle cx={liveFrom.x} cy={liveFrom.y} r="4.5" fill="var(--c-primary)" />
+                </g>
               )}
             </svg>
 
-            {/* Columna de conceptos */}
+            {/* --------------------- Conceptos --------------------- */}
             <div className="flex flex-col gap-2.5">
               <p className="text-[11px] font-black uppercase tracking-widest text-emerald-500 mb-0.5">Concepto</p>
               {left.map((p) => (
                 <div key={p.id} data-mid={p.id} data-side="a"
                      ref={(el) => { if (el) tiles.current['a' + p.id] = el; }}
-                     className={tileCls('a', p)}
+                     className={tileCls('a', p)} style={tileStyle(p)}
                      onPointerDown={(e) => onDown('a', p.id, e)}>
-                  {p.a}
-                  <span className="tile-dot right" />
-                  {matched[p.id] && <i className="fa-solid fa-check text-emerald-600 ml-2" />}
+                  <span className="text-sm sm:text-base">{p.a}</span>
+                  <span className="tile-dot right" style={matched[p.id] ? { background: colorOf(p.id) } : undefined} />
+                  {matched[p.id] && (
+                    <span className="pair-num left" style={{ background: colorOf(p.id) }}>{matched[p.id]}</span>
+                  )}
                 </div>
               ))}
             </div>
 
-            {/* Columna de definiciones */}
-            <div className="flex flex-col gap-2.5 mt-4 sm:mt-0">
+            {/* -------------------- Definiciones -------------------- */}
+            <div className="flex flex-col gap-2.5">
               <p className="text-[11px] font-black uppercase tracking-widest text-indigo-400 mb-0.5">Definición</p>
               {right.map((p) => (
                 <div key={p.id} data-mid={p.id} data-side="b"
                      ref={(el) => { if (el) tiles.current['b' + p.id] = el; }}
-                     className={tileCls('b', p)}
+                     className={tileCls('b', p)} style={tileStyle(p)}
                      onPointerDown={(e) => onDown('b', p.id, e)}>
-                  <span className="tile-dot left" />
-                  <span className="text-sm font-semibold">{p.b}</span>
+                  <span className="tile-dot left" style={matched[p.id] ? { background: colorOf(p.id) } : undefined} />
+                  <span className="text-xs sm:text-sm font-semibold">{p.b}</span>
+                  {matched[p.id] && (
+                    <span className="pair-num right" style={{ background: colorOf(p.id) }}>{matched[p.id]}</span>
+                  )}
                 </div>
               ))}
             </div>
@@ -761,7 +808,6 @@
       </div>
     );
   }
-
   /* ==================================================================
      5 · JUEGO 4 · FLASHCARDS
      ================================================================== */
