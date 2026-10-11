@@ -206,52 +206,32 @@ body {
 .flip-front { background: linear-gradient(150deg, #ffffff, #f3f2ff); border: 1px solid #e6e4fb; }
 .flip-back  { background: linear-gradient(150deg, #4f46e5, #7c3aed); color: #fff; transform: rotateY(180deg); }
 
-/* ------------------------ 6. MAPA INTERACTIVO ------------------------ */
-.map-wrap { touch-action: manipulation; }
-
-.prov {
-  fill: #e2e6f3;
-  stroke: #ffffff;
-  stroke-width: 2.6;
-  stroke-linejoin: round;
-  cursor: pointer;
-  transition: fill .2s ease;
+/* ------------------------ 6. LÍNEA DE TIEMPO ------------------------- */
+.timeline { position: relative; display: flex; flex-direction: column; gap: .6rem; }
+.timeline::before {
+  content: ''; position: absolute; left: 1.05rem; top: .8rem; bottom: .8rem;
+  width: 4px; border-radius: 4px; background: #e0f2fe;
 }
-.prov:hover      { fill: #cdd4ee; }
-.prov.is-picked  { fill: #a5b4fc; }
-.prov.is-ok      { fill: var(--c-ok); }
-.prov.is-bad     { fill: #fda4af; }
-.prov.is-reveal  { fill: #fcd34d; }
-.prov.is-locked  { cursor: default; }
-
-.prov-label {
-  font-weight: 800; fill: #46456b; paint-order: stroke;
-  stroke: rgba(255, 255, 255, .75); stroke-width: 3px; stroke-linejoin: round;
-  pointer-events: none; text-anchor: middle; user-select: none;
+.tl-slot { position: relative; display: flex; align-items: center; gap: .75rem; min-height: 2.6rem; }
+.tl-dot {
+  position: relative; z-index: 1; flex: none;
+  width: 2.2rem; height: 2.2rem; border-radius: 999px;
+  display: grid; place-items: center;
+  background: #fff; border: 3px solid #bae6fd; color: #7dd3fc;
+  font-weight: 900; font-size: .85rem;
 }
-.prov-label.on-ok { fill: #ffffff; stroke: rgba(4, 90, 66, .45); }
-
-/* Línea guía para etiquetas que caen fuera de su provincia (CABA) */
-.leader { stroke: #b6bccd; stroke-width: 2; pointer-events: none; }
-
-/* Letras de rumbo (N / S / E / O) en el margen del mapa */
-.rumbo {
-  font-size: 30px; font-weight: 900; fill: #a8b0c4;
-  text-anchor: middle; dominant-baseline: middle;
-  pointer-events: none; user-select: none;
+.tl-body {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: .6rem; flex-wrap: wrap;
+  padding: .55rem .8rem; border-radius: 1rem; border: 2px dashed #e2e8f0;
+  font-size: .9rem; font-weight: 700; color: #334155;
 }
-
-.river { fill: none; stroke: #38bdf8; stroke-width: 5; stroke-linecap: round; opacity: .8; }
-
-.city { cursor: pointer; }
-.city .dot { fill: #f43f5e; stroke: #fff; stroke-width: 3.5; transition: fill .2s ease; }
-.city:hover .dot { fill: #e11d48; }
-.city.is-ok  .dot { fill: var(--c-ok); }
-.city.is-bad .dot { fill: #fb7185; }
-.city.is-reveal .dot { fill: #f59e0b; }
-.city .city-label {
-  font-size: 19px; font-weight: 800; fill: #3f3d61; pointer-events: none;
-  paint-order: stroke; stroke: rgba(255, 255, 255, .85); stroke-width: 4px; stroke-linejoin: round;
+.tl-slot.is-next .tl-dot  { border-color: #0ea5e9; color: #0ea5e9; }
+.tl-slot.is-next .tl-body { border-color: #7dd3fc; background: #f0f9ff; }
+.tl-slot.is-placed .tl-dot  { background: var(--c-ok); border-color: var(--c-ok); color: #fff; }
+.tl-slot.is-placed .tl-body { border-style: solid; border-color: #a7f3d0; background: #ecfdf5; }
+.tl-year {
+  flex: none; padding: .15rem .55rem; border-radius: 999px;
+  background: #0ea5e9; color: #fff; font-weight: 900; font-size: .8rem;
 }
 
 /* ------------------- 7. UNIR CON FLECHAS (arrastre) ------------------ */
@@ -309,7 +289,7 @@ body {
 .pair-num.left  { left: -.5rem; }
 .pair-num.right { right: -.5rem; }
 
-/* ------------------ 8. CAZADOR DE PODERES (arcade) ------------------ */
+/* --------------- 8. CLASIFICAR EN BALDES (arcade) ---------------- */
 .bucket {
   border-radius: 1.35rem; border: 3px dashed transparent;
   padding: .9rem .6rem; text-align: center;
@@ -318,9 +298,10 @@ body {
 }
 .bucket:active { transform: scale(.96); }
 .bucket.hot    { border-color: #fff; transform: scale(1.05); box-shadow: var(--shadow-lg); }
-.bucket-ejecutivo   { background: linear-gradient(150deg, #fbbf24, #f59e0b); color: #4a3208; }
-.bucket-legislativo { background: linear-gradient(150deg, #818cf8, #6366f1); color: #fff; }
-.bucket-judicial    { background: linear-gradient(150deg, #34d399, #10b981); color: #05513a; }
+.bucket-amber   { background: linear-gradient(150deg, #fbbf24, #f59e0b); color: #4a3208; }
+.bucket-indigo  { background: linear-gradient(150deg, #818cf8, #6366f1); color: #fff; }
+.bucket-emerald { background: linear-gradient(150deg, #34d399, #10b981); color: #05513a; }
+.bucket-sky     { background: linear-gradient(150deg, #38bdf8, #0284c7); color: #fff; }
 
 .life-heart { transition: transform .25s ease, opacity .25s ease; }
 .life-heart.gone { opacity: .25; transform: scale(.8); }

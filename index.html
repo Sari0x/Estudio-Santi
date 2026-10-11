@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-  <meta name="description" content="Juegos para estudiar Santa Fe y la Argentina — Ciencias Sociales 4.°" />
+  <meta name="description" content="Juegos para estudiar los pueblos originarios de Santa Fe — Ciencias Sociales" />
   <meta name="theme-color" content="#6366f1" />
-  <title>Santa Fe y la Argentina · Juegos de estudio</title>
+  <title>Pueblos originarios de Santa Fe · Juegos de estudio</title>
 
   <!-- Tipografía -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -41,7 +41,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Datos del PDF + utilidades -->
+  <!-- Datos del resumen + utilidades -->
   <script src="app.js"></script>
 
   <!-- ==================================================================
@@ -339,177 +339,120 @@
   }
 
   /* ==================================================================
-     3 · JUEGO 2 · MAPA INTERACTIVO
+     3 · JUEGO 2 · LÍNEA DE TIEMPO
+     Los hechos aparecen mezclados (sin la fecha) y hay que tocarlos del
+     más antiguo al más nuevo. Al acertar, el hecho baja a la línea de
+     tiempo y se revela su fecha.
      ================================================================== */
-  function MapGame({ onFinish, onExit }) {
-    const M = APP.MAP;
-    const [chs] = useState(() => APP.pick(M.challenges, 10));
-    const [i, setI]         = useState(0);
-    const [picks, setPicks] = useState([]);
-    const [checked, setChecked] = useState(false);
-    const [wasOk, setWasOk] = useState(false);
-    const [score, setScore] = useState(0);
+  function TimelineGame({ onFinish, onExit }) {
+    const rounds = APP.TIMELINE_ROUNDS;
+    const TOTAL = rounds.reduce((a, x) => a + x.events.length, 0);
+
+    const [r, setR]           = useState(0);
+    const [pool, setPool]     = useState(() => APP.shuffle(rounds[0].events.map((_, k) => k)));
+    const [placed, setPlaced] = useState(0);       // cuántos hechos ya están en la línea
+    const [missed, setMissed] = useState(false);   // si ya se equivocó en el lugar actual
+    const [wrong, setWrong]   = useState(null);    // índice que se sacude
+    const [score, setScore]   = useState(0);
     const [correct, setCorrect] = useState(0);
-    const [labels, setLabels] = useState(true);
-    const [done, setDone]   = useState(false);
+    const [errors, setErrors] = useState(0);
+    const [done, setDone]     = useState(false);
 
-    const ch = chs[i];
-    const multi = ch.mode === 'multi';
-    const TOTAL = chs.length;
+    const round = rounds[r];
+    const roundDone = placed === round.events.length;
 
-    /** Clase CSS de una zona según el estado del desafío. */
-    function stateOf(id) {
-      const isTarget = ch.targets.indexOf(id) !== -1;
-      const isPicked = picks.indexOf(id) !== -1;
-      if (!checked) return isPicked ? 'is-picked' : '';
-      if (isTarget && isPicked) return 'is-ok';
-      if (isTarget && !isPicked) return 'is-reveal';
-      if (!isTarget && isPicked) return 'is-bad';
-      return 'is-locked';
-    }
+    useEffect(() => {
+      setPool(APP.shuffle(rounds[r].events.map((_, k) => k)));
+      setPlaced(0); setMissed(false); setWrong(null);
+    }, [r]);
 
-    function tap(id, ev) {
-      if (checked) return;
-      APP.sfx.play('click');
-      if (multi) {
-        setPicks((p) => (p.indexOf(id) !== -1 ? p.filter((x) => x !== id) : p.concat(id)));
-      } else {
-        setPicks([id]);
-        evaluate([id], ev);
-      }
-    }
+    useEffect(() => { if (roundDone) { APP.confetti(120); APP.sfx.play('win'); } }, [roundDone]);
 
-    function evaluate(list, ev) {
-      const t = ch.targets;
-      const ok = list.length === t.length && t.every((x) => list.indexOf(x) !== -1);
-      setChecked(true);
-      setWasOk(ok);
-      if (ok) {
-        const pts = 100 + (multi ? 50 : 0);
+    function tap(k, ev) {
+      if (roundDone) return;
+      if (k === placed) {
+        const pts = missed ? 30 : 100;
+        if (!missed) setCorrect((c) => c + 1);
         setScore((s) => s + pts);
-        setCorrect((c) => c + 1);
-        fx.good(ev ? { x: ev.clientX, y: ev.clientY } : null, pts);
+        fx.good({ x: ev.clientX, y: ev.clientY }, pts);
+        setPool((p) => p.filter((x) => x !== k));
+        setPlaced(placed + 1);
+        setMissed(false);
       } else {
         fx.bad();
+        setMissed(true);
+        setErrors((n) => n + 1);
+        setWrong(k);
+        setTimeout(() => setWrong(null), 600);
       }
     }
 
-    function next() {
+    function nextRound() {
       APP.sfx.play('click');
-      if (i + 1 >= TOTAL) { setDone(true); return; }
-      setI(i + 1); setPicks([]); setChecked(false); setWasOk(false);
+      if (r + 1 >= rounds.length) { setDone(true); return; }
+      setR(r + 1);
     }
 
     if (done) {
-      return <ResultScreen title="Mapa de Santa Fe" score={score} correct={correct} total={TOTAL}
+      return <ResultScreen title="Línea de tiempo" score={score} correct={correct} total={TOTAL}
+        extra={<p className="text-sm text-slate-500">Toques equivocados: <b>{errors}</b></p>}
         onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
         onExit={() => onFinish({ score, correct, total: TOTAL })} />;
     }
 
-    /** Dibuja una etiqueta que puede tener varias líneas (separadas con \n). */
-    function Label({ text, x, y, fs, cls }) {
-      const lines = text.split('\n');
-      return (
-        <text x={x} y={y - (lines.length - 1) * (fs * 0.55)} className={'prov-label ' + (cls || '')} style={{ fontSize: fs + 'px' }}>
-          {lines.map((l, k) => <tspan key={k} x={x} dy={k === 0 ? 0 : fs * 1.15}>{l}</tspan>)}
-        </text>
-      );
-    }
-
     return (
       <div className="no-touch-zoom">
-        <GameHeader title="Mapa de Santa Fe" subtitle={'Desafío ' + (i + 1) + ' de ' + TOTAL}
-          onExit={onExit} progress={{ v: i, m: TOTAL }}
+        <GameHeader title="Línea de tiempo" subtitle={'Ronda ' + (r + 1) + ' de ' + rounds.length + ' · ' + round.title}
+          onExit={onExit} progress={{ v: rounds.slice(0, r).reduce((a, x) => a + x.events.length, 0) + placed, m: TOTAL }}
           right={<div className="text-right">
             <p className="font-black text-sky-600 leading-none">{score}</p>
             <p className="text-[10px] uppercase font-bold text-slate-400">puntos</p>
           </div>} />
 
-        <div className="card p-4 sm:p-6 anim-fadeup">
-          <div className="flex items-start justify-between gap-3 mb-3">
-            <p className="font-black text-base sm:text-lg leading-snug flex-1">
-              <i className="fa-solid fa-location-crosshairs text-sky-500 mr-2" />{ch.q}
-            </p>
-            <button className="btn btn-ghost !px-3 !py-1.5 !text-xs shrink-0"
-                    onClick={() => { APP.sfx.play('click'); setLabels(!labels); }}>
-              <i className={'fa-solid ' + (labels ? 'fa-eye' : 'fa-eye-slash')} />
-              {labels ? 'Nombres' : 'Sin nombres'}
-            </button>
-          </div>
+        <div className="card p-4 sm:p-6 anim-fadeup" key={r}>
+          <p className="text-xs sm:text-sm text-slate-500 mb-4">
+            <i className="fa-solid fa-hand-pointer mr-1 text-sky-500" />
+            Tocá los hechos <b>en orden</b>: primero el más antiguo, al final el más nuevo.
+          </p>
 
-          {multi && !checked && (
-            <p className="text-xs text-slate-500 mb-2">
-              <i className="fa-solid fa-hand-pointer mr-1" />
-              Tocá todas las que correspondan y después apretá <b>Comprobar</b>.
-              {picks.length > 0 && <span className="ml-1 text-sky-600 font-bold">({picks.length} marcada{picks.length > 1 ? 's' : ''})</span>}
-            </p>
+          {/* Línea de tiempo */}
+          <ol className="timeline">
+            {round.events.map((e, k) => {
+              const isPlaced = k < placed;
+              const isNext = k === placed;
+              return (
+                <li key={k} className={'tl-slot ' + (isPlaced ? 'is-placed anim-pop' : isNext ? 'is-next' : '')}>
+                  <span className="tl-dot">{isPlaced ? <i className="fa-solid fa-check" /> : k + 1}</span>
+                  {isPlaced
+                    ? <div className="tl-body"><span className="tl-year">{e.y}</span><span>{e.t}</span></div>
+                    : <div className="tl-body text-slate-400 font-bold">{isNext ? (k === 0 ? '¿Qué pasó primero?' : '¿Y después?') : '…'}</div>}
+                </li>
+              );
+            })}
+          </ol>
+
+          {/* Hechos para ubicar */}
+          {!roundDone && (
+            <div className="grid gap-2.5 mt-5 stagger">
+              {pool.map((k) => (
+                <button key={k}
+                  className={'option ' + (wrong === k ? 'is-bad anim-shake' : '')}
+                  onClick={(e) => tap(k, e)}>
+                  <span className="badge"><i className="fa-solid fa-clock-rotate-left" /></span>
+                  <span className="flex-1">{round.events[k].t}</span>
+                </button>
+              ))}
+            </div>
           )}
 
-          {/* El ancho se limita en función de la altura (relación 824:1080)
-              para que el mapa llene su caja sin franjas vacías. */}
-          <div className="map-wrap rounded-2xl bg-gradient-to-b from-sky-50 to-white p-2 border border-sky-100 mx-auto"
-               style={{ maxWidth: 'min(26rem, max(20rem, 46vh))' }}>
-            <svg viewBox={M.viewBox} className="mx-auto block h-auto w-full" role="img"
-                 aria-label="Mapa del norte y centro de la Argentina con sus provincias">
-              {/* Rumbos (N / S / E / O) */}
-              {M.rumbos.map((d) => (
-                <text key={d.t} x={d.x} y={d.y} className="rumbo">{d.t}</text>
-              ))}
-
-              {/* Provincias clickeables (geometría real) */}
-              {M.provinces.map((p) => (
-                <path key={p.id} d={p.d}
-                  className={'prov ' + stateOf(p.id) + (checked ? ' is-locked' : '')}
-                  onClick={(e) => tap(p.id, e)}>
-                  <title>{p.name}</title>
-                </path>
-              ))}
-
-              {/* Río Paraná */}
-              {M.rivers.map((d, k) => <path key={k} d={d} className="river" />)}
-
-              {/* Nombres de provincia (con línea guía si la etiqueta va afuera) */}
-              {labels && M.provinces.map((p) => (
-                <g key={'l' + p.id}>
-                  {p.leader && <line x1={p.px} y1={p.py} x2={p.lx - 4} y2={p.ly - 4} className="leader" />}
-                  <Label text={p.short} x={p.lx} y={p.ly} fs={p.fs}
-                    cls={stateOf(p.id) === 'is-ok' ? 'on-ok' : ''} />
-                </g>
-              ))}
-
-              {/* Ciudades (el nombre aparece al corregir) */}
-              {M.cities.map((c) => (
-                <g key={c.id} className={'city ' + stateOf(c.id)} onClick={(e) => tap(c.id, e)}>
-                  <circle cx={c.cx} cy={c.cy} r="24" fill="transparent" />
-                  <circle className="dot" cx={c.cx} cy={c.cy} r="10" />
-                  {checked && <text className="city-label" x={c.lx} y={c.ly} textAnchor={c.anchor}>{c.label}</text>}
-                </g>
-              ))}
-            </svg>
-            <p className="text-[10px] text-center text-slate-400 mt-1 leading-snug">
-              Norte y centro de la Argentina ·
-              <span className="text-rose-400"> ●</span> ciudades ·
-              <span className="text-sky-400"> ▬</span> río Paraná
-            </p>
-          </div>
-
-          {multi && !checked && (
-            <button className="btn btn-primary w-full mt-4" disabled={picks.length === 0}
-                    onClick={(e) => evaluate(picks, e)}>
-              <i className="fa-solid fa-check-double" /> Comprobar
-            </button>
-          )}
-
-          {checked && (
-            <Explain ok={wasOk} why={ch.why}>
-              {!wasOk && <p className="text-xs text-slate-500 mt-1">
-                <span className="inline-block w-3 h-3 rounded align-middle mr-1" style={{ background: '#fcd34d' }} />
-                En amarillo, la respuesta correcta.
-              </p>}
-              <button className="btn btn-primary mt-4 w-full sm:w-auto" onClick={next}>
-                {i + 1 >= TOTAL ? 'Ver resultado' : 'Siguiente desafío'} <i className="fa-solid fa-arrow-right" />
+          {roundDone && (
+            <div className="rounded-2xl p-4 mt-6 bg-emerald-50 border-2 border-emerald-200 anim-pop text-center">
+              <p className="font-black text-emerald-700 text-lg">¡Línea completa! {praise()}</p>
+              <p className="text-sm text-slate-600 mt-1">Ordenaste los {round.events.length} hechos de “{round.title}”.</p>
+              <button className="btn btn-primary mt-3" onClick={nextRound}>
+                {r + 1 >= rounds.length ? 'Ver resultado' : 'Siguiente ronda'} <i className="fa-solid fa-arrow-right" />
               </button>
-            </Explain>
+            </div>
           )}
         </div>
       </div>
@@ -914,13 +857,16 @@
   }
 
   /* ==================================================================
-     6 · JUEGO 5 (extra) · CAZADOR DE PODERES
-     Caen tarjetas con funciones / autoridades / sedes y hay que soltarlas
-     en el balde del poder correcto. 3 vidas, combos y puntaje.
+     6 · JUEGOS 5 Y 6 (arcade) · CLASIFICAR EN BALDES
+     Caen tarjetas y hay que soltarlas en el balde correcto. La misma
+     mecánica sirve para "Cazador de Pueblos" y "¿Nómade o sedentario?".
+     3 vidas, combos y puntaje.
      ================================================================== */
-  function PowersGame({ onFinish, onExit }) {
-    const TOTAL = 18, TIME = 9;
-    const [queue] = useState(() => APP.pick(APP.CLASSIFY_ITEMS, TOTAL));
+  function ClassifyGame({ kind, onFinish, onExit }) {
+    const cfg = APP.CLASSIFY_GAMES[kind];
+    const TIME = 9;
+    const [queue] = useState(() => APP.pick(cfg.items, Math.min(18, cfg.items.length)));
+    const TOTAL = queue.length;
     const [i, setI]         = useState(0);
     const [lives, setLives] = useState(3);
     const [score, setScore] = useState(0);
@@ -938,6 +884,7 @@
     const resolveRef = useRef(null);            // siempre apunta al `resolve` más nuevo
 
     const item = queue[i];
+    const bucketName = (id) => cfg.buckets.find((x) => x.id === id).name;
 
     /* Reloj por tarjeta */
     useEffect(() => {
@@ -979,7 +926,7 @@
         setRes(null);
         if (nextLives <= 0 || i + 1 >= TOTAL) setOver(true);
         else setI(i + 1);
-      }, ok ? 750 : 1400);
+      }, ok ? 750 : 1600);
     }
     resolveRef.current = resolve;
 
@@ -1021,7 +968,7 @@
     }, [dragging]);
 
     if (over) {
-      return <ResultScreen title="Cazador de Poderes" score={score} correct={correct} total={TOTAL}
+      return <ResultScreen title={cfg.title} score={score} correct={correct} total={TOTAL}
         extra={<p className="text-sm text-slate-500">
           Mejor combo: <b className="text-fuchsia-600">×{bestCombo}</b>
           {lives <= 0 && <span className="block mt-1">Te quedaste sin vidas… ¡pero clasificaste {correct} tarjetas!</span>}
@@ -1034,7 +981,7 @@
 
     return (
       <div className="no-touch-zoom">
-        <GameHeader title="Cazador de Poderes" subtitle={'Tarjeta ' + (i + 1) + ' de ' + TOTAL}
+        <GameHeader title={cfg.title} subtitle={'Tarjeta ' + (i + 1) + ' de ' + TOTAL}
           onExit={onExit} progress={{ v: i, m: TOTAL }}
           right={<div className="flex items-center gap-3">
             <div className="flex gap-1 text-rose-500">
@@ -1052,9 +999,9 @@
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs text-slate-500">
               <i className="fa-solid fa-hand-pointer mr-1 text-fuchsia-500" />
-              Arrastrá la tarjeta al balde correcto (o tocá el balde).
+              {cfg.question} Arrastrá la tarjeta al balde correcto (o tocá el balde).
             </p>
-            {combo >= 2 && <span className="chip !bg-fuchsia-50 !text-fuchsia-600 !border-fuchsia-200">⚡ combo ×{combo}</span>}
+            {combo >= 2 && <span className="chip !bg-fuchsia-50 !text-fuchsia-600 !border-fuchsia-200 shrink-0">⚡ combo ×{combo}</span>}
           </div>
 
           <Bar value={t} max={TIME} className={timerCls} />
@@ -1078,8 +1025,8 @@
           </div>
 
           {/* Baldes */}
-          <div className="grid grid-cols-3 gap-2.5">
-            {APP.POWERS.map((p) => {
+          <div className="grid gap-2.5" style={{ gridTemplateColumns: 'repeat(' + cfg.buckets.length + ', minmax(0,1fr))' }}>
+            {cfg.buckets.map((p) => {
               let extra = '';
               if (hot === p.id) extra += ' hot';
               if (res) {
@@ -1088,7 +1035,7 @@
               }
               return (
                 <div key={p.id} data-bucket={p.id}
-                     className={'bucket bucket-' + p.id + extra}
+                     className={'bucket ' + p.cls + extra}
                      onClick={(e) => resolve(p.id, { x: e.clientX, y: e.clientY })}>
                   <i className={'fa-solid ' + p.icon + ' text-2xl'} />
                   <p className="font-black text-xs sm:text-base mt-1 leading-tight">{p.name}</p>
@@ -1105,7 +1052,7 @@
                 : <p className="font-black text-rose-700">
                     {res.chosen === null ? '¡Se acabó el tiempo!' : encourage()}
                     <span className="block text-sm text-slate-600 font-semibold mt-1">
-                      “{item.t}” corresponde al Poder <b>{APP.POWERS.find((x) => x.id === item.p).name}</b>.
+                      “{item.t}” va en <b>{bucketName(item.p)}</b>.
                     </span>
                   </p>}
             </div>
@@ -1119,84 +1066,9 @@
      7 · RESUMEN PARA LEER
      ================================================================== */
   function Resumen({ onExit }) {
-    const secciones = [
-      { t: '1. Nos ubicamos en Santa Fe', p: [
-        'Santa Fe es una de las 24 provincias en que se divide la Argentina. Está en el centro-este del país y en su territorio predominan las llanuras (tierras planas).',
-        'Forma parte de dos regiones: la Región del Litoral y la Región Centro.',
-        'Tiene su propia Constitución, que dice los derechos y obligaciones de sus habitantes.',
-        'Su gobierno se divide en tres poderes: Ejecutivo, Legislativo y Judicial, con sede en la ciudad de Santa Fe (la capital).',
-        'La provincia está dividida en 19 departamentos, formados por municipios y comunas.'
-      ]},
-      { t: '2. Santa Fe en la Argentina', p: [
-        'La Argentina se divide en 24 territorios: 23 provincias y 1 ciudad autónoma (la Ciudad de Buenos Aires).',
-        'Según el Censo de 2022, Santa Fe tiene 3.544.908 habitantes: es la tercera provincia más poblada, después de Buenos Aires y Córdoba.',
-        'Tiene una superficie de 133.249,1 km² (la 11.ª provincia más extensa del país).',
-        'Limita con seis provincias: al norte con Chaco; al este con Entre Ríos y Corrientes; al sur con Buenos Aires; al oeste con Santiago del Estero y Córdoba.',
-        'La capital es Santa Fe de la Vera Cruz, en el centro de la provincia, sobre el margen derecho del río Paraná.',
-        '¿Sabías que…? La ciudad de Rosario supera el millón de habitantes: más del doble que la ciudad de Santa Fe.'
-      ]},
-      { t: '3. Las regiones', p: [
-        'Una región es un grupo de tres o más provincias que comparten cosas en común, como el relieve, las producciones económicas y la cultura.',
-        'Región del Litoral: está en el noreste del país. La forman Santa Fe, Formosa, Chaco, Misiones, Corrientes y Entre Ríos. Se agrupan por sus características físicas y naturales.',
-        'Región Centro: la forman Santa Fe, Entre Ríos y Córdoba. Es una regionalización política y social que busca desarrollar la economía, la educación, la salud, la ciencia y la cultura.',
-        '¿Sabías que…? La Autopista Rosario–Córdoba es la ruta más importante de la Región Centro: une las dos ciudades más grandes del país después de Buenos Aires.'
-      ]},
-      { t: '4. El Gobierno Nacional', p: [
-        'La Constitución nacional es la ley fundamental del país. Establece los derechos y deberes de los habitantes y dice que la forma de gobierno es representativa, republicana y federal.',
-        'Representativa: el pueblo elige representantes para que gobiernen en su nombre.',
-        'Republicana: existe división de poderes (Ejecutivo, Legislativo y Judicial).',
-        'Federal: conviven dos niveles de gobierno, el de cada provincia y el nacional, con sede en la Ciudad de Buenos Aires.'
-      ]},
-      { t: '5. El Gobierno de la provincia de Santa Fe', p: [
-        'Como todas las provincias, Santa Fe es autónoma: puede dictar sus propias leyes, siempre que no contradigan las leyes nacionales.',
-        'Sus autoridades residen en la ciudad de Santa Fe. El gobierno tiene tres poderes: Ejecutivo, Legislativo y Judicial.',
-        'La provincia está dividida en 19 departamentos, que se subdividen en municipios (administrados por intendentes) y comunas (administradas por presidentes comunales).',
-        'La Constitución de Santa Fe fue sancionada el 14 de abril de 1962 y se basa en la Constitución nacional. Su Sección Primera se titula “Principios, Derechos, Garantías y Deberes”.',
-        'Palabra nueva — sancionar: autorizar o aprobar una ley o disposición.',
-        'Palabra nueva — apelar: recurso al que puede recurrir un ciudadano para que se revise una resolución judicial.'
-      ]}
-    ];
-
-    const tablaNac = [
-      ['Legislativo', 'El Congreso de la Nación (Cámara de Diputados y Cámara de Senadores)', 'Elabora las leyes y normas que hay que cumplir. Sede: Congreso Nacional.'],
-      ['Ejecutivo', 'El presidente de la nación y su gabinete de ministros', 'Administra el país; promulga y ejecuta las leyes. Sede: Casa Rosada.'],
-      ['Judicial', 'Los jueces de la Corte Suprema de Justicia y los tribunales inferiores', 'Interpreta las leyes y las hace cumplir con sus sentencias. Sede: Corte Suprema.']
-    ];
-    const tablaProv = [
-      ['Ejecutivo', 'El gobernador, jefe de la administración pública y representante de Santa Fe ante la nación y las demás provincias', 'Dirige y administra la provincia. Sede: Casa Gris.'],
-      ['Legislativo', 'La Cámara de Senadores y la Cámara de Diputados', 'Elabora las leyes provinciales y controla la administración pública. Sede: Legislatura provincial.'],
-      ['Judicial', 'La Corte Suprema de Justicia, las Cámaras de Apelación y los jueces de Primera Instancia', 'Hace cumplir las leyes dentro del territorio provincial.']
-    ];
-
-    function Tabla({ title, rows }) {
-      return (
-        <div className="card p-4 sm:p-5 mt-4">
-          <h4 className="font-black text-indigo-600 mb-3">{title}</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[34rem]">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400">
-                  <th className="py-2 pr-3">Poder</th><th className="py-2 pr-3">¿Quién lo ejerce?</th><th className="py-2">¿Qué hace? / Sede</th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((r) => (
-                  <tr key={r[0]} className="border-t border-slate-100 align-top">
-                    <td className="py-2.5 pr-3 font-black text-indigo-700 whitespace-nowrap">{r[0]}</td>
-                    <td className="py-2.5 pr-3 text-slate-600">{r[1]}</td>
-                    <td className="py-2.5 text-slate-600">{r[2]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      );
-    }
-
     return (
       <div>
-        <GameHeader title="Resumen para leer" subtitle="Santa Fe y la Argentina · Ciencias Sociales 4.°" onExit={onExit} />
+        <GameHeader title="Resumen para leer" subtitle="Pueblos originarios de Santa Fe" onExit={onExit} />
 
         <div className="card p-4 sm:p-6">
           <h3 className="font-black text-lg mb-3"><i className="fa-solid fa-table-list text-indigo-500 mr-2" />Ficha rápida</h3>
@@ -1210,7 +1082,7 @@
           </dl>
         </div>
 
-        {secciones.map((s) => (
+        {APP.RESUMEN.map((s) => (
           <div key={s.t} className="card p-4 sm:p-6 mt-4">
             <h4 className="font-black text-indigo-600 mb-2">{s.t}</h4>
             <ul className="space-y-2">
@@ -1223,11 +1095,30 @@
           </div>
         ))}
 
-        <Tabla title="Los tres poderes del Estado nacional" rows={tablaNac} />
-        <Tabla title="Los tres poderes en la provincia de Santa Fe" rows={tablaProv} />
+        <div className="card p-4 sm:p-5 mt-4">
+          <h4 className="font-black text-indigo-600 mb-3">Los pueblos antes de los españoles</h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[34rem]">
+              <thead>
+                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400">
+                  <th className="py-2 pr-3">Cultura</th><th className="py-2 pr-3">¿Dónde?</th><th className="py-2">¿Cómo vivían?</th>
+                </tr>
+              </thead>
+              <tbody>
+                {APP.PUEBLOS_TABLA.map((r) => (
+                  <tr key={r[0]} className="border-t border-slate-100 align-top">
+                    <td className="py-2.5 pr-3 font-black text-indigo-700 whitespace-nowrap">{r[0]}</td>
+                    <td className="py-2.5 pr-3 text-slate-600">{r[1]}</td>
+                    <td className="py-2.5 text-slate-600">{r[2]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
 
         <p className="text-center text-xs text-slate-400 my-6">
-          Contenido tomado del material de estudio de Ciencias Sociales 4.° (Santa Fe), páginas 9 a 14.
+          Contenido tomado del resumen “Ciencias Sociales: Pueblos originarios de Santa Fe”.
         </p>
       </div>
     );
@@ -1236,9 +1127,34 @@
   /* ==================================================================
      8 · MENÚ PRINCIPAL
      ================================================================== */
+  /* Juegos que dan estrellas (las Flashcards y el Resumen no). */
+  const STAR_GAMES = APP.GAMES.filter((g) => g.id !== 'resumen' && g.id !== 'cartas');
+
+  /** Tarjeta con el nivel actual y lo que falta para el próximo. */
+  function LevelCard({ xp }) {
+    const lv = APP.levelFor(xp);
+    return (
+      <div className="rounded-2xl bg-white/70 border border-indigo-100 p-3 mt-5 max-w-sm">
+        <div className="flex items-center gap-3">
+          <span className="text-3xl">{lv.icon}</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-black uppercase tracking-widest text-indigo-400">Nivel {lv.n}</p>
+            <p className="font-black text-slate-700 leading-tight">{lv.name}</p>
+          </div>
+          <span className="text-sm font-black text-amber-600">⚡ {xp} XP</span>
+        </div>
+        <div className="mt-2"><Bar value={lv.next ? xp - lv.min : 1} max={lv.next ? lv.next - lv.min : 1} /></div>
+        <p className="text-[11px] text-slate-500 mt-1">
+          {lv.next ? <>Te faltan <b>{lv.next - xp} XP</b> para el nivel {lv.n + 1}.</> : '¡Llegaste al nivel máximo!'}
+        </p>
+      </div>
+    );
+  }
+
   function Home({ progress, onPlay }) {
-    const totalStars = Object.keys(progress.bestStars).reduce((a, k) => a + progress.bestStars[k], 0);
-    const maxStars = 15;   // 5 juegos × 3 estrellas
+    const totalStars = STAR_GAMES.reduce((a, g) => a + (progress.bestStars[g.id] || 0), 0);
+    const maxStars = STAR_GAMES.length * 3;
+    const knownCount = (progress.knownCards || []).length;
 
     return (
       <div>
@@ -1247,12 +1163,12 @@
           <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-indigo-100/70 blur-2xl" />
           <div className="absolute -left-8 bottom-0 w-36 h-36 rounded-full bg-amber-100/60 blur-2xl" />
           <div className="relative">
-            <Chip icon="fa-graduation-cap">Ciencias Sociales 4.° · páginas 9 a 14</Chip>
+            <Chip icon="fa-graduation-cap">Ciencias Sociales</Chip>
             <h1 className="text-3xl sm:text-5xl font-black mt-3 leading-none bg-gradient-to-br from-indigo-600 via-violet-600 to-sky-500 bg-clip-text text-transparent">
-              Santa Fe y la Argentina
+              Pueblos originarios de Santa Fe
             </h1>
             <p className="text-slate-500 mt-2 max-w-lg">
-              Cinco juegos para repasar la ubicación, los límites, las regiones y los tres poderes del gobierno. ¡Elegí uno y a jugar!
+              Quiénes vivían acá antes de los españoles, cómo vivían, la conquista, los pueblos de hoy y las escuelas interculturales bilingües. ¡Elegí un juego y a jugar!
             </p>
 
             <div className="flex flex-wrap items-center gap-4 mt-5">
@@ -1260,12 +1176,10 @@
                 <Stars n={Math.round((totalStars / maxStars) * 3)} />
                 <span className="text-sm font-black text-slate-500">{totalStars}/{maxStars} estrellas</span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-2xl">⚡</span>
-                <span className="text-sm font-black text-slate-500">{progress.xp} XP</span>
-              </div>
             </div>
             <div className="mt-3 max-w-sm"><Bar value={totalStars} max={maxStars} /></div>
+
+            <LevelCard xp={progress.xp} />
           </div>
         </div>
 
@@ -1274,6 +1188,7 @@
           {APP.GAMES.map((g) => {
             const st = progress.bestStars[g.id];
             const plays = progress.played[g.id] || 0;
+            const scored = g.id !== 'resumen' && g.id !== 'cartas';
             return (
               <button key={g.id} className="card card-hover p-5 text-left flex flex-col"
                       onClick={() => { APP.sfx.play('click'); onPlay(g.id); }}>
@@ -1285,9 +1200,11 @@
                 <div className="flex items-center justify-between mt-4">
                   {g.id === 'resumen'
                     ? <span className="text-xs font-bold text-slate-400">Sin puntaje · sólo leer</span>
-                    : <Stars n={st || 0} size="sm" />}
+                    : g.id === 'cartas'
+                      ? <span className="text-xs font-bold text-amber-600">{knownCount}/{APP.FLASHCARDS.length} ya las sé</span>
+                      : <Stars n={st || 0} size="sm" />}
                   <span className="text-xs font-black text-indigo-500">
-                    {plays > 0 && g.id !== 'resumen' && <span className="text-slate-400 mr-2">{plays} partida{plays > 1 ? 's' : ''}</span>}
+                    {plays > 0 && scored && <span className="text-slate-400 mr-2">{plays} partida{plays > 1 ? 's' : ''}</span>}
                     Jugar <i className="fa-solid fa-arrow-right ml-1" />
                   </span>
                 </div>
@@ -1299,8 +1216,24 @@
         <div className="card p-4 mt-5 flex items-start gap-3 bg-amber-50/70 border-amber-200">
           <i className="fa-solid fa-lightbulb text-amber-500 text-xl mt-0.5" />
           <p className="text-sm text-slate-600">
-            <b>Consejo:</b> arrancá por las <b>Flashcards</b> o el <b>Resumen</b> para leer los datos, y después probá la <b>Trivia</b> y el <b>Cazador de Poderes</b> para ver cuánto te acordás.
+            <b>Consejo:</b> arrancá por el <b>Resumen</b> o las <b>Flashcards</b>, y después probá la <b>Trivia</b>, la <b>Línea de tiempo</b> y los arcades para ver cuánto te acordás. Cada partida te da XP para subir de nivel.
           </p>
+        </div>
+      </div>
+    );
+  }
+
+  /** Cartel que aparece al subir de nivel. */
+  function LevelUp({ lv, onClose }) {
+    useEffect(() => { APP.confetti(180); APP.sfx.play('win'); }, []);
+    return (
+      <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 backdrop-blur-sm p-4" onClick={onClose}>
+        <div className="card p-6 sm:p-8 text-center anim-pop max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
+          <div className="text-6xl anim-floaty">{lv.icon}</div>
+          <p className="text-xs font-black uppercase tracking-widest text-indigo-400 mt-3">¡Subiste de nivel!</p>
+          <h3 className="text-2xl font-black mt-1">Nivel {lv.n}: {lv.name}</h3>
+          <p className="text-slate-500 mt-2">Seguí jugando para llegar al próximo nivel.</p>
+          <button className="btn btn-primary mt-5" onClick={onClose}>¡Genial! <i className="fa-solid fa-arrow-right" /></button>
         </div>
       </div>
     );
@@ -1314,12 +1247,21 @@
     const [progress, setProgress] = useState(() => APP.store.get());
     const [nonce, setNonce] = useState(0);       // fuerza el reinicio de un juego
     const [muted, setMuted] = useState(() => APP.store.get().muted);
+    const [levelUp, setLevelUp] = useState(null);
 
     useEffect(() => { APP.sfx.setMuted(muted); }, [muted]);
     useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [screen]);
 
+    /** Muestra el cartel si el XP nuevo pasa a otro nivel. */
+    function checkLevel(before, after) {
+      const a = APP.levelFor(before), b = APP.levelFor(after);
+      if (b.n > a.n) setLevelUp(b);
+    }
+
     function addXp(n) {
-      setProgress((p) => APP.store.set({ xp: p.xp + n }));
+      const cur = APP.store.get();
+      checkLevel(cur.xp, cur.xp + n);
+      setProgress(APP.store.set({ xp: cur.xp + n }));
     }
 
     /** Guarda el resultado de una partida y vuelve al menú (o reinicia). */
@@ -1327,32 +1269,36 @@
       const pct = r.total ? r.correct / r.total : 0;
       const stars = APP.starsFor(pct);
       const cur = APP.store.get();
+      const xp = cur.xp + Math.round(r.score / 10);
       const next = APP.store.set({
-        xp: cur.xp + Math.round(r.score / 10),
+        xp: xp,
         bestStars: Object.assign({}, cur.bestStars, { [gameId]: Math.max(cur.bestStars[gameId] || 0, stars) }),
         bestScore: Object.assign({}, cur.bestScore, { [gameId]: Math.max(cur.bestScore[gameId] || 0, r.score) }),
         played: Object.assign({}, cur.played, { [gameId]: (cur.played[gameId] || 0) + 1 })
       });
       setProgress(next);
+      checkLevel(cur.xp, xp);
       if (r.retry) setNonce((n) => n + 1);
       else setScreen('home');
     }
 
     function resetAll() {
-      if (!window.confirm('¿Borrar todo el progreso guardado (estrellas, XP y tarjetas aprendidas)?')) return;
+      if (!window.confirm('¿Borrar todo el progreso guardado (estrellas, XP, nivel y tarjetas aprendidas)?')) return;
       setProgress(APP.store.reset());
       setScreen('home');
     }
 
     const back = () => setScreen('home');
+    const lv = APP.levelFor(progress.xp);
 
     let content;
     if (screen === 'home')        content = <Home progress={progress} onPlay={setScreen} />;
     else if (screen === 'trivia')  content = <Trivia key={nonce} onExit={back} onFinish={(r) => finish('trivia', r)} />;
-    else if (screen === 'mapa')    content = <MapGame key={nonce} onExit={back} onFinish={(r) => finish('mapa', r)} />;
+    else if (screen === 'tiempo')  content = <TimelineGame key={nonce} onExit={back} onFinish={(r) => finish('tiempo', r)} />;
     else if (screen === 'unir')    content = <MatchGame key={nonce} onExit={back} onFinish={(r) => finish('unir', r)} />;
     else if (screen === 'cartas')  content = <Flashcards onExit={back} onXp={addXp} />;
-    else if (screen === 'poderes') content = <PowersGame key={nonce} onExit={back} onFinish={(r) => finish('poderes', r)} />;
+    else if (screen === 'pueblos') content = <ClassifyGame key={'p' + nonce} kind="pueblos" onExit={back} onFinish={(r) => finish('pueblos', r)} />;
+    else if (screen === 'nomades') content = <ClassifyGame key={'n' + nonce} kind="nomades" onExit={back} onFinish={(r) => finish('nomades', r)} />;
     else if (screen === 'resumen') content = <Resumen onExit={back} />;
 
     return (
@@ -1361,12 +1307,13 @@
         <div className="flex items-center justify-between py-3">
           <button className="flex items-center gap-2 font-black text-slate-700" onClick={back}>
             <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white grid place-items-center">
-              <i className="fa-solid fa-map" />
+              <i className="fa-solid fa-feather" />
             </span>
             <span className="hidden sm:inline">Estudio Santi</span>
           </button>
           <div className="flex items-center gap-2">
-            <span className="chip !bg-amber-50 !text-amber-600 !border-amber-200">⚡ {progress.xp} XP</span>
+            <span className="chip !bg-indigo-50 !text-indigo-600 !border-indigo-200" title={lv.name}>{lv.icon} Nivel {lv.n}</span>
+            <span className="hidden sm:inline"><span className="chip !bg-amber-50 !text-amber-600 !border-amber-200">⚡ {progress.xp} XP</span></span>
             <button className="btn btn-ghost !px-3 !py-2" title={muted ? 'Activar sonido' : 'Silenciar'}
                     onClick={() => { const m = !muted; setMuted(m); setProgress(APP.store.set({ muted: m })); if (!m) APP.sfx.play('click'); }}>
               <i className={'fa-solid ' + (muted ? 'fa-volume-xmark' : 'fa-volume-high')} />
@@ -1379,8 +1326,10 @@
 
         {content}
 
+        {levelUp && <LevelUp lv={levelUp} onClose={() => { APP.sfx.play('click'); setLevelUp(null); }} />}
+
         <footer className="text-center text-[11px] text-slate-400 mt-10">
-          Hecho para estudiar 💜 · Contenido: Ciencias Sociales 4.° — “Santa Fe y la Argentina” (págs. 9 a 14)
+          Hecho para estudiar 💜 · Contenido: Ciencias Sociales — “Pueblos originarios de Santa Fe”
         </footer>
       </div>
     );
