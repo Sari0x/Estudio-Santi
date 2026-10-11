@@ -37,9 +37,11 @@
   <div id="root"></div>
 
   <!-- React 18 + Babel (para poder escribir JSX directo en el archivo) -->
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Versiones fijas: si no, unpkg sirve la última y una versión mayor
+       nueva de Babel puede romper la app (pantalla en blanco). -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
 
   <!-- Datos del resumen + utilidades -->
   <script src="app.js"></script>
