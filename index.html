@@ -7,6 +7,13 @@
   <meta name="theme-color" content="#6366f1" />
   <title>Pueblos originarios de Santa Fe · Juegos de estudio</title>
 
+  <!-- App instalable (Android: "Agregar a la pantalla principal") -->
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="Estudio Santi" />
+
   <!-- Tipografía -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -42,6 +49,9 @@
   <script src="https://unpkg.com/react@18.3.1/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+
+  <!-- Howler.js: música de fondo y efectos de sonido -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 
   <!-- Datos del resumen + utilidades -->
   <script src="app.js"></script>
@@ -130,7 +140,7 @@
       <header className="sticky top-0 z-30 -mx-4 px-4 pt-3 pb-3 mb-4
                          bg-white/80 backdrop-blur-md border-b border-indigo-100">
         <div className="flex items-center gap-3">
-          <button className="btn btn-ghost !px-3 !py-2" onClick={() => { APP.sfx.play('click'); onExit(); }}
+          <button className="btn btn-ghost !px-3 !py-2" data-sfx="back" onClick={onExit}
                   aria-label="Volver al menú">
             <i className="fa-solid fa-arrow-left" />
             <span className="hidden sm:inline">Menú</span>
@@ -182,10 +192,10 @@
         {extra}
 
         <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
-          <button className="btn btn-primary" onClick={() => { APP.sfx.play('click'); onRetry(); }}>
+          <button className="btn btn-primary" onClick={onRetry}>
             <i className="fa-solid fa-rotate-right" /> Jugar otra vez
           </button>
-          <button className="btn btn-ghost" onClick={() => { APP.sfx.play('click'); onExit(); }}>
+          <button className="btn btn-ghost" data-sfx="back" onClick={onExit}>
             <i className="fa-solid fa-house" /> Volver al menú
           </button>
         </div>
@@ -266,7 +276,6 @@
     }
 
     function next() {
-      APP.sfx.play('click');
       if (i + 1 >= TOTAL) { setDone(true); return; }
       setI(i + 1); setChosen(null);
     }
@@ -318,7 +327,7 @@
                 else cls += ' is-dim';
               }
               return (
-                <button key={o} className={cls} disabled={answered} onClick={(e) => answer(o, e)}>
+                <button key={o} data-sfx="none" className={cls} disabled={answered} onClick={(e) => answer(o, e)}>
                   <span className="badge">{'ABCD'[k]}</span>
                   <span className="flex-1">{o}</span>
                   {answered && o === q.ok && <i className="fa-solid fa-circle-check text-emerald-600" />}
@@ -390,7 +399,6 @@
     }
 
     function nextRound() {
-      APP.sfx.play('click');
       if (r + 1 >= rounds.length) { setDone(true); return; }
       setR(r + 1);
     }
@@ -437,7 +445,7 @@
           {!roundDone && (
             <div className="grid gap-2.5 mt-5 stagger">
               {pool.map((k) => (
-                <button key={k}
+                <button key={k} data-sfx="none"
                   className={'option ' + (wrong === k ? 'is-bad anim-shake' : '')}
                   onClick={(e) => tap(k, e)}>
                   <span className="badge"><i className="fa-solid fa-clock-rotate-left" /></span>
@@ -571,7 +579,7 @@
         setActive(null); setDrag(null);
         return;
       }
-      APP.sfx.play('click');
+      APP.sfx.play('pick');
       setActive({ side, id });
       setDrag(toArea(e));
     }
@@ -605,7 +613,6 @@
     useEffect(() => { if (roundDone) { APP.confetti(120); APP.sfx.play('win'); } }, [roundDone]);
 
     function nextRound() {
-      APP.sfx.play('click');
       if (r + 1 >= rounds.length) { setDone(true); return; }
       setR(r + 1);
     }
@@ -770,7 +777,6 @@
     const [known, setKnown] = useState(() => APP.store.get().knownCards || []);
 
     function loadDeck(name) {
-      APP.sfx.play('click');
       setDeck(name);
       setCards(name === 'Todas' ? APP.FLASHCARDS.slice() : APP.FLASHCARDS.filter((c) => c.deck === name));
       setI(0); setFlipped(false);
@@ -779,7 +785,6 @@
     const card = cards[i];
 
     function go(d) {
-      APP.sfx.play('click');
       setFlipped(false);
       setTimeout(() => setI((v) => (v + d + cards.length) % cards.length), 120);
     }
@@ -793,7 +798,7 @@
         APP.sfx.play('correct');
         APP.confetti(20);
         onXp(5);
-      } else APP.sfx.play('click');
+      }
     }
 
     const isKnown = card && known.indexOf(card.id) !== -1;
@@ -844,7 +849,7 @@
         </div>
 
         <button className="btn btn-ghost w-full mt-3 max-w-2xl mx-auto !flex"
-                onClick={() => { APP.sfx.play('click'); setCards(APP.shuffle(cards)); setI(0); setFlipped(false); }}>
+                onClick={() => { setCards(APP.shuffle(cards)); setI(0); setFlipped(false); }}>
           <i className="fa-solid fa-shuffle" /> Mezclar el mazo
         </button>
 
@@ -937,6 +942,7 @@
       if (res || over) return;
       e.preventDefault();
       startRef.current = { x: e.clientX, y: e.clientY };
+      APP.sfx.play('pick');
       setDragging(true);
       setDrag({ dx: 0, dy: 0 });
     }
@@ -1192,8 +1198,8 @@
             const plays = progress.played[g.id] || 0;
             const scored = g.id !== 'resumen' && g.id !== 'cartas';
             return (
-              <button key={g.id} className="card card-hover p-5 text-left flex flex-col"
-                      onClick={() => { APP.sfx.play('click'); onPlay(g.id); }}>
+              <button key={g.id} data-sfx="open" className="card card-hover p-5 text-left flex flex-col"
+                      onClick={() => onPlay(g.id)}>
                 <div className={'w-12 h-12 rounded-2xl grid place-items-center text-white text-xl mb-3 bg-gradient-to-br ' + g.tint}>
                   <i className={'fa-solid ' + g.icon} />
                 </div>
@@ -1227,7 +1233,7 @@
 
   /** Cartel que aparece al subir de nivel. */
   function LevelUp({ lv, onClose }) {
-    useEffect(() => { APP.confetti(180); APP.sfx.play('win'); }, []);
+    useEffect(() => { APP.confetti(180); APP.sfx.play('levelup'); }, []);
     return (
       <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 backdrop-blur-sm p-4" onClick={onClose}>
         <div className="card p-6 sm:p-8 text-center anim-pop max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
@@ -1241,6 +1247,51 @@
     );
   }
 
+  /** Botón de sonido: abre un menú para silenciar la música y los efectos por separado. */
+  function SoundMenu({ open, setOpen, musicMuted, sfxMuted, onMusic, onSfx }) {
+    const ref = useRef(null);
+    useEffect(() => {
+      if (!open) return;
+      const h = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+      document.addEventListener('pointerdown', h);
+      return () => document.removeEventListener('pointerdown', h);
+    }, [open]);
+
+    const allOff = musicMuted && sfxMuted;
+    const icon = allOff ? 'fa-volume-xmark' : (musicMuted || sfxMuted) ? 'fa-volume-low' : 'fa-volume-high';
+
+    function Row({ icon, label, hint, on, onToggle }) {
+      return (
+        <button className="sound-row" role="switch" aria-checked={on} onClick={onToggle}>
+          <i className={'fa-solid ' + icon + ' w-5 text-center ' + (on ? 'text-indigo-500' : 'text-slate-300')} />
+          <span className="flex-1 text-left">
+            <span className="block font-black text-sm text-slate-700">{label}</span>
+            <span className="block text-[11px] text-slate-400">{hint}</span>
+          </span>
+          <span className={'switch ' + (on ? 'on' : '')}><i /></span>
+        </button>
+      );
+    }
+
+    return (
+      <div className="relative" ref={ref}>
+        <button className="btn btn-ghost !px-3 !py-2" title="Sonido" aria-expanded={open}
+                onClick={() => setOpen(!open)}>
+          <i className={'fa-solid ' + icon} />
+        </button>
+        {open && (
+          <div className="sound-menu anim-pop">
+            <p className="text-[11px] font-black uppercase tracking-widest text-indigo-400 px-2 pb-1">Sonido</p>
+            <Row icon="fa-music" label="Música" hint="Ondas alfa para concentrarse"
+                 on={!musicMuted} onToggle={() => onMusic(!musicMuted)} />
+            <Row icon="fa-bell" label="Efectos" hint="Clicks, aciertos y errores"
+                 on={!sfxMuted} onToggle={() => onSfx(!sfxMuted)} />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   /* ==================================================================
      9 · APLICACIÓN
      ================================================================== */
@@ -1248,10 +1299,13 @@
     const [screen, setScreen] = useState('home');
     const [progress, setProgress] = useState(() => APP.store.get());
     const [nonce, setNonce] = useState(0);       // fuerza el reinicio de un juego
-    const [muted, setMuted] = useState(() => APP.store.get().muted);
+    const [musicMuted, setMusicMuted] = useState(() => APP.store.get().musicMuted);
+    const [sfxMuted, setSfxMuted]     = useState(() => APP.store.get().sfxMuted);
+    const [soundMenu, setSoundMenu]   = useState(false);
     const [levelUp, setLevelUp] = useState(null);
 
-    useEffect(() => { APP.sfx.setMuted(muted); }, [muted]);
+    useEffect(() => { APP.sfx.setMusicMuted(musicMuted); }, [musicMuted]);
+    useEffect(() => { APP.sfx.setSfxMuted(sfxMuted); }, [sfxMuted]);
     useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [screen]);
 
     /** Muestra el cartel si el XP nuevo pasa a otro nivel. */
@@ -1286,7 +1340,8 @@
 
     function resetAll() {
       if (!window.confirm('¿Borrar todo el progreso guardado (estrellas, XP, nivel y tarjetas aprendidas)?')) return;
-      setProgress(APP.store.reset());
+      APP.store.reset();
+      setProgress(APP.store.set({ musicMuted, sfxMuted }));   // el sonido elegido se mantiene
       setScreen('home');
     }
 
@@ -1307,19 +1362,17 @@
       <div className="max-w-app mx-auto px-4 pb-16">
         {/* Barra superior global */}
         <div className="flex items-center justify-between py-3">
-          <button className="flex items-center gap-2 font-black text-slate-700" onClick={back}>
-            <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 to-violet-600 text-white grid place-items-center">
-              <i className="fa-solid fa-feather" />
-            </span>
+          <button className="flex items-center gap-2 font-black text-slate-700" data-sfx="back" onClick={back}>
+            <img src="icons/icon-192.png" alt="" className="w-9 h-9" />
             <span className="hidden sm:inline">Estudio Santi</span>
           </button>
           <div className="flex items-center gap-2">
             <span className="chip !bg-indigo-50 !text-indigo-600 !border-indigo-200" title={lv.name}>{lv.icon} Nivel {lv.n}</span>
             <span className="hidden sm:inline"><span className="chip !bg-amber-50 !text-amber-600 !border-amber-200">⚡ {progress.xp} XP</span></span>
-            <button className="btn btn-ghost !px-3 !py-2" title={muted ? 'Activar sonido' : 'Silenciar'}
-                    onClick={() => { const m = !muted; setMuted(m); setProgress(APP.store.set({ muted: m })); if (!m) APP.sfx.play('click'); }}>
-              <i className={'fa-solid ' + (muted ? 'fa-volume-xmark' : 'fa-volume-high')} />
-            </button>
+            <SoundMenu open={soundMenu} setOpen={setSoundMenu}
+              musicMuted={musicMuted} sfxMuted={sfxMuted}
+              onMusic={(m) => { setMusicMuted(m); setProgress(APP.store.set({ musicMuted: m })); }}
+              onSfx={(m) => { setSfxMuted(m); setProgress(APP.store.set({ sfxMuted: m })); }} />
             <button className="btn btn-ghost !px-3 !py-2" title="Borrar progreso" onClick={resetAll}>
               <i className="fa-solid fa-trash-can" />
             </button>
@@ -1328,7 +1381,7 @@
 
         {content}
 
-        {levelUp && <LevelUp lv={levelUp} onClose={() => { APP.sfx.play('click'); setLevelUp(null); }} />}
+        {levelUp && <LevelUp lv={levelUp} onClose={() => setLevelUp(null)} />}
 
         <footer className="text-center text-[11px] text-slate-400 mt-10">
           Hecho para estudiar 💜 · Contenido: Ciencias Sociales — “Pueblos originarios de Santa Fe”
@@ -1338,6 +1391,11 @@
   }
 
   ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+
+  /* Service worker: hace la app instalable y la deja abrir sin conexión. */
+  if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
   </script>
 </body>
 </html>

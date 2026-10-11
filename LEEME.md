@@ -48,8 +48,15 @@ y el cuadro de los tres pueblos.
 
 - **Progreso guardado** en el navegador (`localStorage`). El tacho de basura de
   arriba a la derecha lo borra todo.
-- **Sonido** sintetizado con Web Audio (sin archivos mp3). Se silencia con el
-  botón del parlante.
+- **Sonido con [Howler.js](https://howlerjs.com/)**: música de fondo (ondas alfa, en
+  bucle) y efectos en cada click, al acertar, al errar, al volver atrás, al dar
+  vuelta una tarjeta, al agarrar una ficha y al subir de nivel. El botón del
+  parlante abre un menú para silenciar **la música** y **los efectos** por separado
+  (queda guardado). La música arranca con el primer toque (los navegadores no
+  dejan reproducir audio antes) y se pausa si la app pasa a segundo plano.
+- **Instalable en Android**: desde Chrome, menú ⋮ → *Agregar a la pantalla
+  principal* / *Instalar app*. Usa `estudio.png` como ícono y se abre a pantalla
+  completa, como una app.
 - **Feedback**: confeti y destello verde al acertar; marco rojo suave, vibración
   y explicación al errar. Los mensajes son siempre de refuerzo positivo.
 - **Responsive** mobile-first; pensado para jugar en celular.
@@ -60,7 +67,13 @@ y el cuadro de los tres pueblos.
 index.html   Estructura + componentes de React (JSX inline, así funciona con file://)
 styles.css   Tema visual, animaciones, tarjeta con volteo 3D, línea de tiempo, drag & drop
 app.js       Datos del resumen (trivia, línea de tiempo, pares, flashcards, baldes) + utilidades
+audio/       musica.mp3 (20 min recortados del original, 96 kbps) y efectos.mp3 (todos los efectos)
+icons/       Íconos de la app hechos con estudio.png (normales y "maskable" para Android)
+manifest.webmanifest, sw.js   Lo que hace falta para instalarla en el celular
 ```
+
+> El archivo original de la música pesa 1 GB (12 horas), así que no se sube a
+> GitHub (está en `.gitignore`). La app usa el recorte de `audio/musica.mp3`.
 
 Para agregar o corregir contenido, todo el material está en `app.js`:
 `TRIVIA`, `TIMELINE_ROUNDS`, `MATCH_ROUNDS`, `FLASHCARDS`, `CLASSIFY_GAMES`,

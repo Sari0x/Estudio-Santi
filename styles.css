@@ -325,3 +325,26 @@ body {
     transition-duration: .001ms !important;
   }
 }
+
+/* ----------------------- 11. MENÚ DE SONIDO ------------------------- */
+.sound-menu {
+  position: absolute; right: 0; top: calc(100% + .5rem); z-index: 60;
+  width: 15.5rem; padding: .6rem .4rem .4rem;
+  background: #fff; border: 1px solid #e6e4fb; border-radius: 1.1rem;
+  box-shadow: var(--shadow-lg);
+}
+.sound-row {
+  width: 100%; display: flex; align-items: center; gap: .7rem;
+  padding: .6rem .6rem; border-radius: .8rem;
+}
+.sound-row:hover { background: #f5f5ff; }
+.switch {
+  flex: none; position: relative; width: 2.6rem; height: 1.5rem; border-radius: 999px;
+  background: #e2e8f0; transition: background .2s ease;
+}
+.switch > i {
+  position: absolute; top: .2rem; left: .2rem; width: 1.1rem; height: 1.1rem; border-radius: 999px;
+  background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.2); transition: transform .2s ease;
+}
+.switch.on { background: var(--c-primary); }
+.switch.on > i { transform: translateX(1.1rem); }

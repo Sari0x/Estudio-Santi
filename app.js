@@ -3,7 +3,7 @@
    Ciencias Sociales — contenido de pueblos_originarios_de_santa_fe.md
 
    app.js  ->  1) DATOS del resumen (banco de contenido educativo)
-               2) UTILIDADES (sonido sintetizado, confeti, vibración, storage)
+               2) UTILIDADES (sonido con Howler.js, confeti, vibración, storage)
 
    Todo se expone en el objeto global `window.APP` para que index.html
    (donde viven los componentes de React) lo consuma.
@@ -31,61 +31,85 @@ window.APP = (function () {
     return shuffle(arr).slice(0, n);
   }
 
-  /* ------------------------- Sonido (Web Audio) -------------------------
-     No usamos archivos mp3: generamos los efectos con osciladores para que
-     la app funcione 100% offline una vez cargada. */
+  /* ------------------------- Sonido (Howler.js) -------------------------
+     Usamos la librería Howler.js para dos cosas:
+       · los efectos: un solo archivo (audio/efectos.mp3) con todos los
+         sonidos uno detrás del otro ("sprite"), así se cargan de una vez;
+       · la música de fondo (audio/musica.mp3), en bucle y con html5: true
+         para que empiece a sonar sin esperar a que baje el archivo entero.
+     Música y efectos se silencian por separado. */
+  const SFX_SPRITE = {
+    click: [0, 80], back: [330, 200], pick: [780, 100], correct: [1130, 700],
+    wrong: [2080, 500], win: [2830, 1800], lose: [4880, 1000], flip: [6130, 250],
+    tick: [6630, 80], levelup: [6960, 1900], open: [9110, 160]
+  };
+  const MUSIC_VOL = 0.35;
+
   const sfx = (function () {
-    let ctx = null;
-    let muted = false;
+    const ok = typeof window.Howl === 'function';
+    let sfxMuted = false, musicMuted = false;
+    let effects = null, music = null, unlocked = false;
 
-    function ac() {
-      if (!ctx) {
-        const AC = window.AudioContext || window.webkitAudioContext;
-        if (!AC) return null;
-        ctx = new AC();
-      }
-      if (ctx.state === 'suspended') ctx.resume();
-      return ctx;
+    function getEffects() {
+      if (!ok) return null;
+      if (!effects) effects = new Howl({ src: ['audio/efectos.mp3'], sprite: SFX_SPRITE, volume: 0.7 });
+      return effects;
+    }
+    function getMusic() {
+      if (!ok) return null;
+      if (!music) music = new Howl({ src: ['audio/musica.mp3'], html5: true, loop: true, volume: 0 });
+      return music;
+    }
+    function startMusic() {
+      const m = getMusic();
+      if (!m || musicMuted || !unlocked || document.hidden) return;
+      if (!m.playing()) { m.play(); m.fade(0, MUSIC_VOL, 2500); }
+    }
+    function stopMusic() {
+      if (music && music.playing()) music.pause();
     }
 
-    /** Toca una nota simple. */
-    function tone(freq, start, dur, type, vol) {
-      const c = ac();
-      if (!c) return;
-      const osc = c.createOscillator();
-      const gain = c.createGain();
-      osc.type = type || 'sine';
-      osc.frequency.value = freq;
-      gain.gain.setValueAtTime(0.0001, c.currentTime + start);
-      gain.gain.exponentialRampToValueAtTime(vol || 0.18, c.currentTime + start + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + start + dur);
-      osc.connect(gain).connect(c.destination);
-      osc.start(c.currentTime + start);
-      osc.stop(c.currentTime + start + dur + 0.05);
+    /* El navegador no deja reproducir audio hasta que la persona toca la
+       pantalla: arrancamos la música en el primer toque. */
+    function unlock() {
+      if (unlocked) return;
+      unlocked = true;
+      getEffects();
+      startMusic();
     }
+    window.addEventListener('pointerdown', unlock, { capture: true });
+    window.addEventListener('keydown', unlock, { capture: true });
 
-    /** Melodías por evento. */
-    const patterns = {
-      click:   [[520, 0, 0.07, 'triangle', 0.08]],
-      correct: [[660, 0, 0.11, 'sine', 0.16], [880, 0.09, 0.13, 'sine', 0.16], [1180, 0.19, 0.2, 'sine', 0.13]],
-      wrong:   [[240, 0, 0.16, 'sawtooth', 0.10], [170, 0.13, 0.24, 'sawtooth', 0.09]],
-      win:     [[523, 0, 0.13, 'sine', 0.16], [659, 0.12, 0.13, 'sine', 0.16],
-                [784, 0.24, 0.13, 'sine', 0.16], [1046, 0.36, 0.34, 'sine', 0.16]],
-      lose:    [[392, 0, 0.18, 'triangle', 0.13], [330, 0.16, 0.2, 'triangle', 0.12], [247, 0.34, 0.35, 'triangle', 0.11]],
-      flip:    [[420, 0, 0.06, 'sine', 0.07], [620, 0.05, 0.07, 'sine', 0.07]],
-      tick:    [[900, 0, 0.04, 'square', 0.05]]
-    };
+    /* Si la app pasa a segundo plano (otra app, pantalla bloqueada), pausamos. */
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) stopMusic(); else startMusic();
+    });
 
-    return {
+    /* Sonido en cada click: cualquier botón suena solo. Un botón puede
+       elegir otro sonido con data-sfx="back" (u "open"…), o ninguno con
+       data-sfx="none" (por ejemplo, si ya suena "correcto"/"incorrecto"). */
+    document.addEventListener('click', (e) => {
+      const el = e.target && e.target.closest ? e.target.closest('button, [data-sfx]') : null;
+      if (!el || el.disabled) return;
+      const name = el.getAttribute('data-sfx') || 'click';
+      if (name !== 'none') api.play(name);
+    }, true);
+
+    const api = {
       play(name) {
-        if (muted) return;
-        const p = patterns[name];
-        if (!p) return;
-        try { p.forEach((n) => tone.apply(null, n)); } catch (e) { /* audio no disponible */ }
+        if (sfxMuted || !SFX_SPRITE[name]) return;
+        const h = getEffects();
+        if (h) { try { h.play(name); } catch (e) { /* audio no disponible */ } }
       },
-      setMuted(v) { muted = !!v; },
-      isMuted() { return muted; }
+      setSfxMuted(v) { sfxMuted = !!v; },
+      setMusicMuted(v) {
+        musicMuted = !!v;
+        if (musicMuted) stopMusic(); else startMusic();
+      },
+      isSfxMuted() { return sfxMuted; },
+      isMusicMuted() { return musicMuted; }
     };
+    return api;
   })();
 
   /** Vibración corta (sólo en celulares que la soportan). */
@@ -175,7 +199,8 @@ window.APP = (function () {
   const STORE_KEY = 'estudioSanti.pueblos.v1';
   const DEFAULT_STATE = {
     xp: 0,
-    muted: false,
+    musicMuted: false,
+    sfxMuted: false,
     bestStars: {},   // { trivia: 3, tiempo: 2, ... }
     bestScore: {},   // { trivia: 1250, ... }
     played: {},      // { trivia: 4, ... }  cantidad de partidas
