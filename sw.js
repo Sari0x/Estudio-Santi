@@ -2,7 +2,7 @@
    Estrategia "primero la red": siempre se usa la versión más nueva publicada
    y, si no hay conexión, se abre la última copia guardada.
    La música no se guarda (es pesada y se reproduce por streaming). */
-const CACHE = 'estudio-santi-v1';
+const CACHE = 'estudio-santi-v2';
 const SHELL = ['./', 'index.html', 'app.js', 'styles.css', 'manifest.webmanifest',
                'audio/efectos.mp3', 'icons/icon-192.png', 'icons/icon-512.png'];
 

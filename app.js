@@ -55,19 +55,36 @@ window.APP = (function () {
       if (!effects) effects = new Howl({ src: ['audio/efectos.mp3'], sprite: SFX_SPRITE, volume: 0.7 });
       return effects;
     }
+    /* La música arranca directo con su volumen: el archivo ya trae un
+       fundido de entrada. (Antes empezaba en 0 y subía con fade(), pero
+       si el archivo todavía estaba cargando Howler perdía el fade y la
+       música "sonaba" en silencio.) */
     function getMusic() {
       if (!ok) return null;
-      if (!music) music = new Howl({ src: ['audio/musica.mp3'], html5: true, loop: true, volume: 0 });
+      if (!music) {
+        music = new Howl({
+          src: ['audio/musica.mp3'], html5: true, loop: true, volume: MUSIC_VOL,
+          onload: () => startMusic(),                          // terminó de cargar: si corresponde, que suene
+          onplayerror: () => music.once('unlock', () => startMusic())  // el navegador la bloqueó: reintenta al próximo toque
+        });
+      }
       return music;
     }
+    /** Suena sólo si: no está silenciada, ya hubo un toque, la app está a la
+        vista y el archivo cargó. Nunca arranca dos copias a la vez. */
     function startMusic() {
       const m = getMusic();
       if (!m || musicMuted || !unlocked || document.hidden) return;
-      if (!m.playing()) { m.play(); m.fade(0, MUSIC_VOL, 2500); }
+      if (m.state() !== 'loaded') return;   // cuando termine de cargar, onload la arranca
+      if (!m.playing()) m.play();
     }
     function stopMusic() {
       if (music && music.playing()) music.pause();
     }
+
+    /* Empezamos a bajar la música apenas abre la app, así ya está lista
+       cuando la persona toca la pantalla. */
+    getMusic();
 
     /* El navegador no deja reproducir audio hasta que la persona toca la
        pantalla: arrancamos la música en el primer toque. */
