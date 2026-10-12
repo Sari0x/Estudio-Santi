@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-  <meta name="description" content="Juegos para estudiar Ciencias Sociales (pueblos originarios de Santa Fe) y Lengua" />
+  <meta name="description" content="Juegos para estudiar Ciencias Sociales (pueblos originarios de Santa Fe y recursos naturales) y Lengua" />
   <meta name="theme-color" content="#6366f1" />
   <title>Estudio Santi · Juegos de estudio</title>
 
@@ -1084,6 +1084,137 @@
   }
 
   /* ==================================================================
+     6b · DETECTIVE DE PALABRAS
+     Una oración con una palabra marcada. Para cada palabra hay 3 pasos:
+     qué clase de palabra es y dos preguntas más sobre ella. Los casos los
+     arma la materia (S.DETECTIVE.build()).
+     ================================================================== */
+  function DetectiveGame({ title, onFinish, onExit }) {
+    const S = useSubject();
+    const [cases] = useState(() => S.DETECTIVE.build().map((c) => ({
+      ...c,
+      steps: c.steps.map((st) => {
+        const opts = st.opts.filter((o, k) => st.opts.indexOf(o) === k);
+        return { ...st, opts: st.mix ? APP.shuffle(opts) : opts };
+      })
+    })));
+    const TOTAL = cases.reduce((a, c) => a + c.steps.length, 0);
+
+    const [ci, setCi]         = useState(0);   // palabra actual
+    const [si, setSi]         = useState(0);   // paso dentro de la palabra
+    const [chosen, setChosen] = useState(null);
+    const [score, setScore]   = useState(0);
+    const [correct, setCorrect] = useState(0);
+    const [streak, setStreak] = useState(0);
+    const [results, setResults] = useState([]);  // aciertos por paso de la palabra actual
+    const [done, setDone]     = useState(false);
+
+    const c = cases[ci];
+    const st = c.steps[si];
+    const answered = chosen !== null;
+    const doneSoFar = cases.slice(0, ci).reduce((a, x) => a + x.steps.length, 0) + si;
+    const lastStep = si + 1 >= c.steps.length;
+    const lastCase = ci + 1 >= cases.length;
+
+    function answer(opt, ev) {
+      if (answered) return;
+      const ok = opt === st.ok;
+      if (ok) {
+        const pts = 100 + Math.min(streak * 20, 100);
+        setScore((s) => s + pts);
+        setCorrect((n) => n + 1);
+        setStreak((s) => s + 1);
+        fx.good({ x: ev.clientX, y: ev.clientY }, pts);
+      } else {
+        setStreak(0);
+        fx.bad();
+      }
+      setResults((r) => r.concat(ok));
+      setChosen(opt);
+    }
+
+    function next() {
+      setChosen(null);
+      if (!lastStep) { setSi(si + 1); return; }
+      if (lastCase) { setDone(true); return; }
+      setCi(ci + 1); setSi(0); setResults([]);
+    }
+
+    if (done) {
+      return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
+        extra={<p className="text-sm text-slate-500">Investigaste <b className="text-indigo-600">{cases.length}</b> palabras 🔎</p>}
+        onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
+        onExit={() => onFinish({ score, correct, total: TOTAL })} />;
+    }
+
+    const parts = c.s.split('*');   // [antes, palabra, después]
+
+    return (
+      <div className="no-touch-zoom">
+        <GameHeader
+          title={title}
+          subtitle={'Palabra ' + (ci + 1) + ' de ' + cases.length + ' · pista ' + (si + 1) + ' de ' + c.steps.length}
+          onExit={onExit}
+          progress={{ v: doneSoFar, m: TOTAL }}
+          right={
+            <div className="text-right">
+              <p className="font-black text-indigo-600 leading-none">{score}</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400">puntos</p>
+            </div>
+          } />
+
+        <div className="card p-5 sm:p-7 anim-fadeup" key={ci + '-' + si}>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <Chip icon="fa-magnifying-glass">{st.tag}</Chip>
+            <div className="flex items-center gap-1.5">
+              {streak >= 2 && <span className="chip !bg-amber-50 !text-amber-600 !border-amber-200">🔥 {streak}</span>}
+              {c.steps.map((x, k) => (
+                <span key={k} className={'w-2.5 h-2.5 rounded-full ' +
+                  (k < results.length ? (results[k] ? 'bg-emerald-500' : 'bg-rose-400') : k === si ? 'bg-indigo-500' : 'bg-slate-200')} />
+              ))}
+            </div>
+          </div>
+
+          <p className="rounded-2xl bg-indigo-50/70 border border-indigo-100 px-4 py-4 text-lg sm:text-2xl font-bold text-slate-700 leading-relaxed text-center">
+            {parts[0]}
+            <mark className="px-1.5 py-0.5 rounded-lg bg-amber-200 text-amber-900 font-black">{parts[1]}</mark>
+            {parts[2]}
+          </p>
+
+          <h3 className="text-lg sm:text-2xl font-black mt-5 mb-4 leading-snug">{st.q}</h3>
+
+          <div className="grid gap-2.5 stagger">
+            {st.opts.map((o, k) => {
+              let cls = 'option';
+              if (answered) {
+                if (o === st.ok) cls += ' is-ok';
+                else if (o === chosen) cls += ' is-bad';
+                else cls += ' is-dim';
+              }
+              return (
+                <button key={o} data-sfx="none" className={cls} disabled={answered} onClick={(e) => answer(o, e)}>
+                  <span className="badge">{'ABCD'[k]}</span>
+                  <span className="flex-1">{o}</span>
+                  {answered && o === st.ok && <i className="fa-solid fa-circle-check text-emerald-600" />}
+                  {answered && o === chosen && o !== st.ok && <i className="fa-solid fa-circle-xmark text-rose-500" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {answered && (
+            <Explain ok={chosen === st.ok} why={st.why}>
+              <button className="btn btn-primary mt-4 w-full sm:w-auto" onClick={next}>
+                {lastStep && lastCase ? 'Ver resultado' : lastStep ? 'Siguiente palabra' : 'Siguiente pista'} <i className="fa-solid fa-arrow-right" />
+              </button>
+            </Explain>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ==================================================================
      7 · RESUMEN PARA LEER
      ================================================================== */
   function Resumen({ onExit }) {
@@ -1457,6 +1588,7 @@
     else if (game.type === 'match')    content = <MatchGame key={nonce} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'cards')    content = <Flashcards onExit={back} onXp={addXp} />;
     else if (game.type === 'classify') content = <ClassifyGame key={game.id + nonce} kind={game.id} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'detective') content = <DetectiveGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'resumen')  content = <Resumen onExit={back} />;
 
     return (

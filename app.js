@@ -337,7 +337,9 @@ window.APP = (function () {
     { k: 'Pueblos originarios hoy',        v: '12 pueblos viven en la provincia' },
     { k: 'Los que más territorio ocupan',  v: 'Mocovíes y Abipones (grupo Guaycurú)' },
     { k: 'Semana de los pueblos originarios', v: 'Del 19 al 25 de abril' },
-    { k: 'Escuelas interculturales bilingües', v: '36 en Santa Fe' }
+    { k: 'Escuelas interculturales bilingües', v: '36 en Santa Fe' },
+    { k: 'Recursos naturales',             v: 'Seres vivos y no vivos de la naturaleza que el hombre no hizo ni transformó' },
+    { k: 'Para que haya vegetales y animales', v: 'Tres recursos minerales: agua, suelo y aire' }
   ];
 
   /** Texto del resumen, por secciones. */
@@ -377,6 +379,14 @@ window.APP = (function () {
       '¿Para qué sirven? Para preservar su lengua y cultura, para que puedan vivir en un mundo con muchas culturas diferentes y para mejorar su calidad de vida.',
       'En Santa Fe: 1993, se crea la Ley Provincial Aborigen. 2005, con el decreto 1719 se les da prioridad a estas escuelas. 2020, recién se reconoce oficialmente como modalidad por la Ley Nacional.',
       'Hoy hay 36 escuelas interculturales bilingües en Santa Fe. La mayoría están en el norte y centro-norte, donde viven más Mocovíes y Qom. En el sur hay algunas cerca de Rosario.'
+    ]},
+    { t: '7. ¿Qué son los recursos naturales?', p: [
+      'Son todos aquellos seres vivos y no vivos que existen en la naturaleza sin que el hombre los haya hecho o transformado, y que pueden servir para satisfacer sus diversas necesidades.',
+      'La energía del Sol, en forma de luz y calor, es un recurso natural.',
+      'La atmósfera, que nos da el oxígeno para respirar, también es un recurso natural.',
+      'Los vegetales y los animales son recursos naturales que el hombre usa para alimentarse y para satisfacer otras necesidades.',
+      'La energía del Sol, el aire de la atmósfera, el agua, el suelo, los animales, los vegetales y los minerales son recursos naturales que el hombre usa para satisfacer sus necesidades.',
+      'Para que haya vegetales y animales se requieren tres recursos minerales: agua, suelo y aire.'
     ]}
   ];
 
@@ -579,7 +589,42 @@ window.APP = (function () {
       why: 'La mayoría están en el norte y centro-norte, donde viven más Mocovíes y Qom.' },
     { t: 'Escuelas interculturales', q: '¿Para qué sirven las escuelas interculturales bilingües?',
       ok: 'Para preservar su lengua y cultura', bad: ['Para que olviden su lengua', 'Para enseñar solo en español', 'Para trasladarlos'],
-      why: 'Sirven para preservar su lengua y cultura, vivir en un mundo con muchas culturas y mejorar su calidad de vida.' }
+      why: 'Sirven para preservar su lengua y cultura, vivir en un mundo con muchas culturas y mejorar su calidad de vida.' },
+
+    // --- Recursos naturales ---
+    { t: 'Recursos naturales', q: '¿Qué son los recursos naturales?',
+      ok: 'Seres vivos y no vivos de la naturaleza que el hombre no hizo ni transformó', bad: ['Cosas que fabrica el hombre en las fábricas', 'Solo los animales salvajes', 'Las casas y las ciudades'],
+      why: 'Son seres vivos y no vivos que existen en la naturaleza sin que el hombre los haya hecho o transformado.' },
+    { t: 'Recursos naturales', q: '¿Para qué le sirven al hombre los recursos naturales?',
+      ok: 'Para satisfacer sus necesidades', bad: ['Para nada', 'Solo para jugar', 'Solo para decorar'],
+      why: 'Pueden servir para satisfacer sus diversas necesidades.' },
+    { t: 'Recursos naturales', q: '¿En qué forma nos llega la energía del Sol?',
+      ok: 'En forma de luz y calor', bad: ['En forma de agua', 'En forma de oxígeno', 'En forma de minerales'],
+      why: 'La energía del Sol, en forma de luz y calor, es un recurso natural.' },
+    { t: 'Recursos naturales', q: '¿Qué nos da la atmósfera para respirar?',
+      ok: 'El oxígeno', bad: ['El suelo', 'La luz', 'Los minerales'],
+      why: 'La atmósfera nos da el oxígeno para respirar; también es un recurso natural.' },
+    { t: 'Recursos naturales', q: '¿Para qué usa el hombre los vegetales y los animales?',
+      ok: 'Para alimentarse y satisfacer otras necesidades', bad: ['Solo para mirarlos', 'Para respirar', 'Para dar luz y calor'],
+      why: 'Los vegetales y los animales son recursos naturales que el hombre usa para alimentarse y para satisfacer otras necesidades.' },
+    { t: 'Recursos naturales', q: '¿Cuál de estos es un recurso natural?',
+      ok: 'El agua', bad: ['Un auto', 'Una casa', 'Un celular'],
+      why: 'El agua existe en la naturaleza sin que el hombre la haya hecho.' },
+    { t: 'Recursos naturales', q: '¿Cuál de estos NO es un recurso natural?',
+      ok: 'Una bicicleta', bad: ['El suelo', 'Los minerales', 'El Sol'],
+      why: 'La bicicleta la hizo el hombre. El suelo, los minerales y el Sol son recursos naturales.' },
+    { t: 'Recursos naturales', q: '¿Qué recursos minerales se necesitan para que haya vegetales y animales?',
+      ok: 'Agua, suelo y aire', bad: ['Sol, luz y calor', 'Oro, plata y hierro', 'Vegetales, animales y Sol'],
+      why: 'Para que haya vegetales y animales se requieren tres recursos minerales: agua, suelo y aire.' },
+    { t: 'Recursos naturales', q: '¿Cuántos recursos minerales se necesitan para que haya vegetales y animales?',
+      ok: 'Tres', bad: ['Uno', 'Dos', 'Siete'],
+      why: 'Tres: agua, suelo y aire.' },
+    { t: 'Recursos naturales', q: 'Los recursos naturales pueden ser…',
+      ok: 'Seres vivos y no vivos', bad: ['Solo seres vivos', 'Solo seres no vivos', 'Solo cosas fabricadas'],
+      why: 'Son todos aquellos seres vivos y no vivos que existen en la naturaleza.' },
+    { t: 'Recursos naturales', q: '¿Cuál de estos recursos naturales es un ser vivo?',
+      ok: 'Un animal', bad: ['El agua', 'El suelo', 'El aire'],
+      why: 'Los animales y los vegetales son seres vivos; el agua, el suelo y el aire son no vivos.' }
   ];
 
   /* =====================================================================
@@ -657,6 +702,13 @@ window.APP = (function () {
       { id: 'n3', a: '3', b: 'Corrientes u oleadas colonizadoras' },
       { id: 'n4', a: '19 al 25 de abril', b: 'Semana de los pueblos originarios' },
       { id: 'n5', a: '1719', b: 'Número del decreto de 2005' }
+    ]},
+    { title: 'Recursos naturales', pairs: [
+      { id: 'r1', a: 'El Sol', b: 'Nos da energía en forma de luz y calor' },
+      { id: 'r2', a: 'La atmósfera', b: 'Nos da el oxígeno para respirar' },
+      { id: 'r3', a: 'Vegetales y animales', b: 'El hombre los usa para alimentarse' },
+      { id: 'r4', a: 'Agua, suelo y aire', b: 'Los tres recursos que necesitan vegetales y animales' },
+      { id: 'r5', a: 'Recurso natural', b: 'Existe en la naturaleza sin que el hombre lo haya hecho' }
     ]}
   ];
 
@@ -697,7 +749,14 @@ window.APP = (function () {
     { id: 'fc27', deck: 'Escuelas bilingües', f: 'Cosmovisión', b: 'Cómo cada pueblo ve y explica el mundo.' },
     { id: 'fc28', deck: 'Escuelas bilingües', f: '¿Para qué sirven?', b: 'Para preservar su lengua y cultura, para vivir en un mundo con muchas culturas diferentes y para mejorar su calidad de vida.' },
     { id: 'fc29', deck: 'Escuelas bilingües', f: '1993 · 2005 · 2020', b: '1993: Ley Provincial Aborigen. 2005: decreto 1719 les da prioridad. 2020: la Ley Nacional las reconoce como modalidad.' },
-    { id: 'fc30', deck: 'Escuelas bilingües', f: '¿Cuántas hay en Santa Fe y dónde?', b: '36. La mayoría en el norte y centro-norte, donde viven más Mocovíes y Qom. En el sur hay algunas cerca de Rosario.' }
+    { id: 'fc30', deck: 'Escuelas bilingües', f: '¿Cuántas hay en Santa Fe y dónde?', b: '36. La mayoría en el norte y centro-norte, donde viven más Mocovíes y Qom. En el sur hay algunas cerca de Rosario.' },
+
+    { id: 'fc31', deck: 'Recursos naturales', f: '¿Qué son los recursos naturales?', b: 'Seres vivos y no vivos que existen en la naturaleza sin que el hombre los haya hecho o transformado, y que sirven para satisfacer sus necesidades.' },
+    { id: 'fc32', deck: 'Recursos naturales', f: 'La energía del Sol', b: 'Llega en forma de luz y calor. Es un recurso natural.' },
+    { id: 'fc33', deck: 'Recursos naturales', f: 'La atmósfera', b: 'Nos da el oxígeno para respirar. También es un recurso natural.' },
+    { id: 'fc34', deck: 'Recursos naturales', f: 'Vegetales y animales', b: 'Recursos naturales que el hombre usa para alimentarse y para satisfacer otras necesidades.' },
+    { id: 'fc35', deck: 'Recursos naturales', f: '¿Qué recursos naturales hay en el dibujo?', b: 'La energía del Sol, el aire de la atmósfera, el agua, el suelo, los animales, los vegetales y los minerales.' },
+    { id: 'fc36', deck: 'Recursos naturales', f: '¿Qué se necesita para que haya vegetales y animales?', b: 'Tres recursos minerales: agua, suelo y aire.' }
   ];
 
   /* =====================================================================
@@ -770,6 +829,37 @@ window.APP = (function () {
         { t: 'Casas permanentes de piedra y madera',       p: 'sedentario', s: 'Casas' },
         { t: 'Los Guaraníes',                              p: 'sedentario', s: 'Pueblo' }
       ]
+    },
+    recursos: {
+      title: '¿Es un recurso natural?',
+      question: '¿Lo hizo la naturaleza o el hombre?',
+      buckets: [
+        { id: 'natural', name: 'Recurso natural',   icon: 'fa-leaf',     cls: 'bucket-emerald' },
+        { id: 'hombre',  name: 'Lo hizo el hombre', icon: 'fa-industry', cls: 'bucket-indigo' }
+      ],
+      items: [
+        { t: 'La luz y el calor del Sol',   p: 'natural', s: 'Energía' },
+        { t: 'El oxígeno de la atmósfera',  p: 'natural', s: 'Aire' },
+        { t: 'El agua de un río',           p: 'natural', s: 'Agua' },
+        { t: 'El suelo',                    p: 'natural', s: 'No vivo' },
+        { t: 'Los minerales',               p: 'natural', s: 'No vivo' },
+        { t: 'Un conejo',                   p: 'natural', s: 'Animal' },
+        { t: 'Un perro',                    p: 'natural', s: 'Animal' },
+        { t: 'Los peces',                   p: 'natural', s: 'Animal' },
+        { t: 'Un árbol',                    p: 'natural', s: 'Vegetal' },
+        { t: 'Las flores',                  p: 'natural', s: 'Vegetal' },
+        { t: 'Las plantas del campo',       p: 'natural', s: 'Vegetal' },
+
+        { t: 'Un auto',                     p: 'hombre', s: 'Fabricado' },
+        { t: 'Una casa',                    p: 'hombre', s: 'Construido' },
+        { t: 'Un celular',                  p: 'hombre', s: 'Fabricado' },
+        { t: 'Una bicicleta',               p: 'hombre', s: 'Fabricado' },
+        { t: 'Un lápiz',                    p: 'hombre', s: 'Fabricado' },
+        { t: 'Una pelota',                  p: 'hombre', s: 'Fabricado' },
+        { t: 'Una mesa de madera',          p: 'hombre', s: 'Transformado' },
+        { t: 'Una botella de plástico',     p: 'hombre', s: 'Fabricado' },
+        { t: 'Una remera',                  p: 'hombre', s: 'Fabricado' }
+      ]
     }
   };
 
@@ -789,6 +879,8 @@ window.APP = (function () {
       desc: '¡Arcade! ¿Guaycurú, Chaná-Timbú o Guaraní? Clasificá antes de que se acabe el tiempo.', tint: 'from-fuchsia-500 to-pink-600' },
     { id: 'nomades',  type: 'classify', name: '¿Nómade o sedentario?', icon: 'fa-person-hiking',
       desc: '¡Arcade! Tirá cada tarjeta al balde correcto.', tint: 'from-rose-500 to-orange-500' },
+    { id: 'recursos', type: 'classify', name: '¿Es un recurso natural?', icon: 'fa-leaf',
+      desc: '¡Arcade! ¿Lo da la naturaleza o lo hizo el hombre?', tint: 'from-lime-500 to-emerald-600' },
     { id: 'resumen',  type: 'resumen', name: 'Resumen para leer', icon: 'fa-book-open',
       desc: 'Todo el tema ordenado, para repasar antes de jugar.', tint: 'from-slate-500 to-slate-700' }
   ];
@@ -806,11 +898,11 @@ window.APP = (function () {
       icon: 'fa-earth-americas',
       tint: 'from-indigo-500 to-violet-600',
       heroText: 'from-indigo-600 via-violet-600 to-sky-500',
-      topic: 'Pueblos originarios de Santa Fe',
-      intro: 'Quiénes vivían acá antes de los españoles, cómo vivían, la conquista, los pueblos de hoy y las escuelas interculturales bilingües. ¡Elegí un juego y a jugar!',
-      expert: 'pueblos originarios',
+      topic: 'Pueblos originarios de Santa Fe y recursos naturales',
+      intro: 'Quiénes vivían acá antes de los españoles, cómo vivían, la conquista, los pueblos de hoy, las escuelas interculturales bilingües y los recursos naturales. ¡Elegí un juego y a jugar!',
+      expert: 'Ciencias Sociales',
       tip: 'arrancá por el <b>Resumen</b> o las <b>Flashcards</b>, y después probá la <b>Trivia</b>, la <b>Línea de tiempo</b> y los arcades para ver cuánto te acordás. Cada partida te da XP para subir de nivel.',
-      source: 'Ciencias Sociales — “Pueblos originarios de Santa Fe”',
+      source: 'Ciencias Sociales — “Pueblos originarios de Santa Fe” y “¿Qué son los recursos naturales?”',
       storeKey: 'estudioSanti.pueblos.v1',   // la clave de siempre: no se pierde el progreso anterior
       LEVELS: LEVELS_SOCIALES,
       FICHA, RESUMEN,

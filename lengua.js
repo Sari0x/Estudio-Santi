@@ -471,6 +471,221 @@
   };
 
   /* =====================================================================
+     DETECTIVE DE PALABRAS
+     Una oración con una palabra marcada entre *asteriscos*. Primero hay
+     que decir qué clase de palabra es y después contestar dos preguntas
+     más sobre ella (tipo de sustantivo, tiempo verbal, raíz y desinencia,
+     tipo de adjetivo…). Las preguntas se arman solas a partir de los datos.
+     ===================================================================== */
+
+  /* Sustantivos. tipo: comun/propio · abs: abstracto/concreto ·
+     ind: individual/colectivo · cont: contable/no contable ·
+     gen: masc/fem · num: sing/plural. null = esa pregunta no se hace. */
+  const D_SUSTANTIVOS = [
+    { s: 'El *perro* de Juan ladra fuerte.',            tipo: 'comun', abs: 'concreto', ind: 'individual', cont: 'contable', gen: 'masc', num: 'sing' },
+    { s: 'Las *mesas* del aula son nuevas.',            tipo: 'comun', abs: 'concreto', ind: 'individual', cont: 'contable', gen: 'fem',  num: 'plural' },
+    { s: 'Los *lápices* están en la cartuchera.',       tipo: 'comun', abs: 'concreto', ind: 'individual', cont: 'contable', gen: 'masc', num: 'plural' },
+    { s: 'Los *niños* juegan en la plaza.',             tipo: 'comun', abs: 'concreto', ind: 'individual', cont: 'contable', gen: 'masc', num: 'plural' },
+    { s: 'Las *abejas* hacen miel.',                    tipo: 'comun', abs: 'concreto', ind: 'individual', cont: 'contable', gen: 'fem',  num: 'plural' },
+    { s: 'El *árbol* del patio es muy alto.',           tipo: 'comun', abs: 'concreto', ind: 'individual', cont: 'contable', gen: 'masc', num: 'sing' },
+    { s: 'Los *libros* están en la biblioteca.',        tipo: 'comun', abs: 'concreto', ind: 'individual', cont: 'contable', gen: 'masc', num: 'plural' },
+    { s: 'La *pelota* quedó en el techo.',              tipo: 'comun', abs: 'concreto', ind: 'individual', cont: 'contable', gen: 'fem',  num: 'sing' },
+    { s: 'Un *enjambre* voló sobre el jardín.',         tipo: 'comun', abs: 'concreto', ind: 'colectivo', de: 'muchas abejas',   cont: 'contable', gen: 'masc', num: 'sing' },
+    { s: 'El *alumnado* salió al recreo.',              tipo: 'comun', abs: 'concreto', ind: 'colectivo', de: 'muchos alumnos',  cont: null,       gen: 'masc', num: 'sing' },
+    { s: 'El *rebaño* come pasto en el campo.',         tipo: 'comun', abs: 'concreto', ind: 'colectivo', de: 'muchas ovejas',   cont: 'contable', gen: 'masc', num: 'sing' },
+    { s: 'Los *rebaños* bajan de la montaña.',          tipo: 'comun', abs: 'concreto', ind: 'colectivo', de: 'muchas ovejas',   cont: 'contable', gen: 'masc', num: 'plural' },
+    { s: 'Vimos un *cardumen* en el río.',              tipo: 'comun', abs: 'concreto', ind: 'colectivo', de: 'muchos peces',    cont: 'contable', gen: 'masc', num: 'sing' },
+    { s: 'La *dentadura* del tiburón es filosa.',       tipo: 'comun', abs: 'concreto', ind: 'colectivo', de: 'muchos dientes',  cont: null,       gen: 'fem',  num: 'sing' },
+    { s: 'Una *jauría* corría por el bosque.',          tipo: 'comun', abs: 'concreto', ind: 'colectivo', de: 'muchos perros',   cont: 'contable', gen: 'fem',  num: 'sing' },
+    { s: 'Tomé un vaso de *agua* fresca.',              tipo: 'comun', abs: 'concreto', ind: null, cont: 'no contable', gen: null,  num: 'sing' },
+    { s: 'Jugamos con la *arena* de la playa.',         tipo: 'comun', abs: 'concreto', ind: null, cont: 'no contable', gen: 'fem', num: 'sing' },
+    { s: 'Compré *leche* en el almacén.',               tipo: 'comun', abs: 'concreto', ind: null, cont: 'no contable', gen: 'fem', num: 'sing' },
+    { s: 'Mamá usó *harina* para la torta.',            tipo: 'comun', abs: 'concreto', ind: null, cont: 'no contable', gen: 'fem', num: 'sing' },
+    { s: 'Siento mucha *alegría* hoy.',                 tipo: 'comun', abs: 'abstracto', ind: null, cont: null, gen: 'fem',  num: 'sing' },
+    { s: 'Queremos *paz* en el mundo.',                 tipo: 'comun', abs: 'abstracto', ind: null, cont: null, gen: 'fem',  num: 'sing' },
+    { s: 'El *amor* de mi mamá es enorme.',             tipo: 'comun', abs: 'abstracto', ind: null, cont: null, gen: 'masc', num: 'sing' },
+    { s: 'Tuve *miedo* durante la tormenta.',           tipo: 'comun', abs: 'abstracto', ind: null, cont: null, gen: 'masc', num: 'sing' },
+    { s: 'La *amistad* es muy importante.',             tipo: 'comun', abs: 'abstracto', ind: null, cont: null, gen: 'fem',  num: 'sing' },
+    { s: 'La *bondad* de Ana es admirable.',            tipo: 'comun', abs: 'abstracto', ind: null, cont: null, gen: 'fem',  num: 'sing' },
+    { s: 'Me dio mucha *tristeza* la película.',        tipo: 'comun', abs: 'abstracto', ind: null, cont: null, gen: 'fem',  num: 'sing' },
+    { s: 'Tus *ideas* son geniales.',                   tipo: 'comun', abs: 'abstracto', ind: null, cont: null, gen: 'fem',  num: 'plural' },
+    { s: '*Miguel* juega al fútbol.',                   tipo: 'propio', abs: null, ind: null, cont: null, gen: 'masc', num: 'sing' },
+    { s: 'Mañana viajamos a *Rosario*.',                tipo: 'propio', abs: null, ind: null, cont: null, gen: null,   num: 'sing' },
+    { s: 'Vivo en *Argentina*.',                        tipo: 'propio', abs: null, ind: null, cont: null, gen: null,   num: 'sing' },
+    { s: '*Santa Fe* es mi provincia.',                 tipo: 'propio', abs: null, ind: null, cont: null, gen: null,   num: 'sing' },
+    { s: '*Lucía* trajo galletitas.',                   tipo: 'propio', abs: null, ind: null, cont: null, gen: 'fem',  num: 'sing' }
+  ];
+
+  /* Verbos regulares: tiempo, infinitivo y dónde termina la raíz. */
+  const D_VERBOS = [
+    { s: 'Ayer *canté* en el acto.',                    tiempo: 'pasado',   inf: 'cantar',   raiz: 'cant' },
+    { s: 'Ayer *comí* fideos con salsa.',               tiempo: 'pasado',   inf: 'comer',    raiz: 'com' },
+    { s: 'El sábado *corrimos* en el parque.',          tiempo: 'pasado',   inf: 'correr',   raiz: 'corr' },
+    { s: 'Anoche Sofía *escribió* un cuento.',          tiempo: 'pasado',   inf: 'escribir', raiz: 'escrib' },
+    { s: 'En la fiesta *bailaron* toda la noche.',      tiempo: 'pasado',   inf: 'bailar',   raiz: 'bail' },
+    { s: 'Ayer *saltaste* la soga en el recreo.',       tiempo: 'pasado',   inf: 'saltar',   raiz: 'salt' },
+    { s: 'El verano pasado *aprendí* a nadar.',         tiempo: 'pasado',   inf: 'aprender', raiz: 'aprend' },
+    { s: 'Mi abuelo *vivió* en el campo.',              tiempo: 'pasado',   inf: 'vivir',    raiz: 'viv' },
+
+    { s: 'Hoy *canto* en el coro.',                     tiempo: 'presente', inf: 'cantar',   raiz: 'cant' },
+    { s: 'Ahora *como* una manzana.',                   tiempo: 'presente', inf: 'comer',    raiz: 'com' },
+    { s: 'Mi hermana *escribe* una carta.',             tiempo: 'presente', inf: 'escribir', raiz: 'escrib' },
+    { s: 'Los chicos *corren* en el patio.',            tiempo: 'presente', inf: 'correr',   raiz: 'corr' },
+    { s: 'Nosotros *comemos* a las doce.',              tiempo: 'presente', inf: 'comer',    raiz: 'com' },
+    { s: 'Ella *salta* muy alto.',                      tiempo: 'presente', inf: 'saltar',   raiz: 'salt' },
+    { s: 'Hoy *vivo* en Santa Fe.',                     tiempo: 'presente', inf: 'vivir',    raiz: 'viv' },
+    { s: 'Ustedes *aprenden* muy rápido.',              tiempo: 'presente', inf: 'aprender', raiz: 'aprend' },
+
+    { s: 'Mañana *jugaré* al fútbol.',                  tiempo: 'futuro',   inf: 'jugar',    raiz: 'jug' },
+    { s: 'Mañana *comeremos* pizza.',                   tiempo: 'futuro',   inf: 'comer',    raiz: 'com' },
+    { s: 'En las vacaciones *viajaré* a Córdoba.',      tiempo: 'futuro',   inf: 'viajar',   raiz: 'viaj' },
+    { s: 'Mañana *escribirás* el final del cuento.',    tiempo: 'futuro',   inf: 'escribir', raiz: 'escrib' },
+    { s: 'El domingo *correrán* una carrera.',          tiempo: 'futuro',   inf: 'correr',   raiz: 'corr' },
+    { s: 'En el acto *cantaremos* el himno.',           tiempo: 'futuro',   inf: 'cantar',   raiz: 'cant' },
+    { s: 'Pronto mi hermanito *aprenderá* a leer.',     tiempo: 'futuro',   inf: 'aprender', raiz: 'aprend' },
+    { s: 'El sábado *bailaré* en la fiesta.',           tiempo: 'futuro',   inf: 'bailar',   raiz: 'bail' }
+  ];
+
+  /* Adjetivos: tipo y el sustantivo al que acompañan. */
+  const D_ADJETIVOS = [
+    { s: 'Tengo un perro *juguetón*.',                  tipo: 'calif', sus: 'perro' },
+    { s: 'Esa casa es muy *linda*.',                    tipo: 'calif', sus: 'casa' },
+    { s: 'El gato *negro* duerme en el sillón.',        tipo: 'calif', sus: 'gato' },
+    { s: 'Las flores *rojas* son de mi mamá.',          tipo: 'calif', sus: 'flores' },
+    { s: 'El payaso contó un chiste *gracioso*.',       tipo: 'calif', sus: 'chiste' },
+    { s: 'La sopa está *caliente*.',                    tipo: 'calif', sus: 'sopa' },
+    { s: 'Mi hermano es *alto*.',                       tipo: 'calif', sus: 'hermano' },
+
+    { s: 'Messi es un jugador *rosarino*.',             tipo: 'gent',  sus: 'jugador' },
+    { s: 'La bandera *argentina* es celeste y blanca.', tipo: 'gent',  sus: 'bandera' },
+    { s: 'Mi tía es una maestra *santafesina*.',        tipo: 'gent',  sus: 'maestra' },
+    { s: 'Comimos unos alfajores *cordobeses*.',        tipo: 'gent',  sus: 'alfajores' },
+    { s: 'Conocí a un chico *brasileño*.',              tipo: 'gent',  sus: 'chico' },
+    { s: 'La pizza *italiana* es riquísima.',           tipo: 'gent',  sus: 'pizza' },
+
+    { s: 'Tengo *dos* perros en mi casa.',              tipo: 'num',   sus: 'perros' },
+    { s: 'Compré *cinco* lápices nuevos.',              tipo: 'num',   sus: 'lápices' },
+    { s: 'En el aula hay *veinte* sillas.',             tipo: 'num',   sus: 'sillas' },
+    { s: 'La araña tiene *ocho* patas.',                tipo: 'num',   sus: 'patas' },
+    { s: 'Anoche leí *tres* cuentos.',                  tipo: 'num',   sus: 'cuentos' },
+    { s: 'El equipo metió *cuatro* goles.',             tipo: 'num',   sus: 'goles' },
+
+    { s: 'Estoy en *cuarto* grado.',                    tipo: 'ord',   sus: 'grado' },
+    { s: 'Me senté en la *tercera* fila.',              tipo: 'ord',   sus: 'fila' },
+    { s: 'Después del *segundo* recreo tenemos Lengua.', tipo: 'ord',  sus: 'recreo' },
+    { s: 'Vivo en el *quinto* piso.',                   tipo: 'ord',   sus: 'piso' },
+    { s: 'Hoy es el *primer* día de clases.',           tipo: 'ord',   sus: 'día' },
+    { s: 'Mi caballo llegó en *sexto* lugar.',          tipo: 'ord',   sus: 'lugar' }
+  ];
+
+  const wordOf = (s) => s.split('*')[1];
+  const ADJ_TIPOS = {
+    calif: { n: 'Calificativo',          why: 'dice una cualidad: cómo es o cómo está.' },
+    gent:  { n: 'Gentilicio',            why: 'dice de dónde es: de qué país, provincia o ciudad.' },
+    num:   { n: 'Numeral (cardinal)',    why: 'dice cuántos hay.' },
+    ord:   { n: 'Ordinal',               why: 'dice el orden.' }
+  };
+  const TIEMPOS = {
+    pasado:   'ya pasó',
+    presente: 'pasa ahora',
+    futuro:   'va a pasar'
+  };
+  const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+  const art = (gen, num) => (gen === 'masc' ? (num === 'sing' ? 'el' : 'los') : (num === 'sing' ? 'la' : 'las'));
+
+  /* Cada paso: { tag, q, ok, opts, why, mix }. Con mix: true el juego mezcla
+     las opciones; sin él quedan en orden (Sustantivo/Verbo/Adjetivo, etc.). */
+
+  /** Pregunta 1, igual para todas: ¿qué clase de palabra es? */
+  function claseStep(w, clase, why) {
+    return { tag: 'Clase de palabra', q: '¿Qué clase de palabra es «' + w + '»?',
+      ok: clase, opts: ['Sustantivo', 'Verbo', 'Adjetivo'], why: why };
+  }
+
+  function sustantivoCase(d) {
+    const w = wordOf(d.s);
+    const pool = [];
+    if (d.tipo) pool.push({ tag: 'Común o propio', q: '«' + w + '» es un sustantivo…',
+      ok: d.tipo === 'propio' ? 'Propio' : 'Común', opts: ['Común', 'Propio'],
+      why: d.tipo === 'propio' ? 'Es propio: es el nombre de una persona, ciudad o país, y va con mayúscula.' : 'Es común: nombra a cualquiera de su clase, como «mesa».' });
+    if (d.abs) pool.push({ tag: 'Abstracto o concreto', q: '«' + w + '» es…',
+      ok: cap(d.abs), opts: ['Concreto', 'Abstracto'],
+      why: d.abs === 'abstracto' ? 'Es abstracto: no se puede ver ni tocar, es una idea, un sentimiento o una cualidad.' : 'Es concreto: se puede ver y tocar.' });
+    if (d.ind) pool.push({ tag: 'Individual o colectivo', q: '«' + w + '» es…',
+      ok: cap(d.ind), opts: ['Individual', 'Colectivo'],
+      why: d.ind === 'colectivo' ? 'Es colectivo: nombra un conjunto de ' + d.de + '.' : 'Es individual: nombra uno solo.' });
+    if (d.cont) pool.push({ tag: 'Contable o no contable', q: '«' + w + '» es…',
+      ok: cap(d.cont), opts: ['Contable', 'No contable'],
+      why: d.cont === 'contable' ? 'Es contable: se puede contar por unidad (1, 2, 3).' : 'Es no contable: solo se puede medir, pesar o dividir.' });
+    if (d.gen) pool.push({ tag: 'Género', q: '¿De qué género es «' + w + '»?',
+      ok: d.gen === 'masc' ? 'Masculino' : 'Femenino', opts: ['Masculino', 'Femenino'],
+      why: 'Concuerda con ' + art(d.gen, d.num).toUpperCase() + ': «' + art(d.gen, d.num) + ' ' + w + '». ' + (d.gen === 'masc' ? 'Masculino va con EL o LOS.' : 'Femenino va con LA o LAS.') });
+    if (d.num) pool.push({ tag: 'Número', q: '¿«' + w + '» está en singular o en plural?',
+      ok: d.num === 'sing' ? 'Singular' : 'Plural', opts: ['Singular', 'Plural'],
+      why: d.num === 'sing' ? 'Singular: nombra 1 solo elemento.' : 'Plural: nombra más de 1 elemento.' });
+    return { s: d.s, w: w, steps: [claseStep(w, 'Sustantivo', 'Es un sustantivo: nombra personas, animales, cosas, lugares, ideas o sentimientos.')].concat(APP.pick(pool, 2)) };
+  }
+
+  /** Opciones para separar raíz y desinencia: la buena y cortes corridos. */
+  function cortes(w, p) {
+    const cut = (k) => w.slice(0, k) + ' | ' + w.slice(k);
+    const alt = [p - 1, p + 1, p + 2, p - 2].filter((k) => k >= 1 && k < w.length).slice(0, 3);
+    return { ok: cut(p), opts: [cut(p)].concat(alt.map(cut)) };
+  }
+
+  function verboCase(d) {
+    const w = wordOf(d.s);
+    const c = cortes(w, d.raiz.length);
+    const des = w.slice(d.raiz.length);
+    const steps = [
+      claseStep(w, 'Verbo', 'Es un verbo: expresa una acción, situación o estado. Su infinitivo es «' + d.inf + '».'),
+      { tag: 'Tiempo verbal', q: '¿En qué tiempo está «' + w + '»?',
+        ok: cap(d.tiempo), opts: ['Pasado', 'Presente', 'Futuro'],
+        why: cap(d.tiempo) + ': ' + TIEMPOS[d.tiempo] + '. Lo dice la desinencia «' + des + '».' }
+    ];
+    const why = 'Viene de ' + d.inf.toUpperCase() + '. La raíz «' + d.raiz + '» se mantiene y tiene el significado; la desinencia «' + des + '» cambia y dice la persona, el número y el tiempo.';
+    steps.push(APP.pick([
+      { tag: 'Raíz y desinencia', q: '¿Cómo se separa «' + w + '» en raíz | desinencia?', mix: true, ok: c.ok, opts: c.opts, why: why },
+      { tag: 'Raíz', mix: true, q: '¿Cuál es la raíz de «' + w + '»?', ok: d.raiz,
+        opts: [d.raiz, w.slice(0, d.raiz.length + 1), d.raiz.slice(0, -1), d.inf], why: why },
+      { tag: 'Desinencia', mix: true, q: '¿Cuál es la desinencia de «' + w + '»?', ok: des,
+        opts: [des, des.slice(1) || w, d.raiz.slice(-1) + des, w], why: why }
+    ], 1)[0]);
+    return { s: d.s, w: w, steps: steps };
+  }
+
+  function adjetivoCase(d) {
+    const w = wordOf(d.s);
+    const t = ADJ_TIPOS[d.tipo];
+    // Distractores para "¿a qué sustantivo acompaña?": otras palabras de la oración.
+    const otras = d.s.replace(/\*[^*]+\*/, '').replace(/[.,]/g, '').split(/\s+/)
+      .filter((x) => x.length > 3 && x !== d.sus);
+    const extra = APP.pick(otras, 2);
+    while (extra.length < 2) extra.push(['mesa', 'escuela', 'amigo'][extra.length]);
+    return { s: d.s, w: w, steps: [
+      claseStep(w, 'Adjetivo', 'Es un adjetivo: dice cómo es el sustantivo «' + d.sus + '» y siempre lo acompaña.'),
+      { tag: 'Tipo de adjetivo', q: '¿Qué tipo de adjetivo es «' + w + '»?',
+        ok: t.n, opts: ['Calificativo', 'Gentilicio', 'Numeral (cardinal)', 'Ordinal'],
+        why: 'Es ' + t.n.toLowerCase() + ': ' + t.why },
+      { tag: '¿A quién acompaña?', mix: true, q: '¿A qué sustantivo acompaña «' + w + '»?',
+        ok: d.sus, opts: [d.sus].concat(extra),
+        why: 'Los adjetivos siempre acompañan al sustantivo: «' + w + '» dice algo de «' + d.sus + '».' }
+    ]};
+  }
+
+  const DETECTIVE = {
+    title: 'Detective de palabras',
+    /** Arma una partida: 2 sustantivos, 2 verbos y 2 adjetivos, mezclados. */
+    build() {
+      return APP.shuffle(
+        APP.pick(D_SUSTANTIVOS, 2).map(sustantivoCase)
+          .concat(APP.pick(D_VERBOS, 2).map(verboCase))
+          .concat(APP.pick(D_ADJETIVOS, 2).map(adjetivoCase))
+      );
+    }
+  };
+
+  /* =====================================================================
      CATÁLOGO DE JUEGOS
      ===================================================================== */
   const GAMES = [
@@ -480,6 +695,8 @@
       desc: 'Ordená cada oración: primero el pasado, después el presente y al final el futuro.', tint: 'from-sky-500 to-cyan-600' },
     { id: 'unir',        type: 'match', name: 'Unir con flechas', icon: 'fa-diagram-project',
       desc: 'Arrastrá cada concepto hasta su definición.', tint: 'from-emerald-500 to-teal-600' },
+    { id: 'detective',   type: 'detective', name: 'Detective de palabras', icon: 'fa-magnifying-glass',
+      desc: '¿Sustantivo, verbo o adjetivo? Descubrí la clase, el tipo, el tiempo, la raíz y la desinencia.', tint: 'from-teal-500 to-sky-600' },
     { id: 'cartas',      type: 'cards', name: 'Flashcards', icon: 'fa-clone',
       desc: 'Repaso rápido: tocá la tarjeta para darla vuelta.', tint: 'from-amber-500 to-orange-600' },
     { id: 'adjetivos',   type: 'classify', name: 'Cazador de adjetivos', icon: 'fa-bolt',
@@ -505,7 +722,7 @@
     topic: 'Verbos, sustantivos y adjetivos',
     intro: 'Textos humorísticos, verbos y sus tiempos, clases de sustantivos, género y número, y adjetivos. ¡Elegí un juego y a jugar!',
     expert: 'Lengua',
-    tip: 'arrancá por el <b>Resumen</b> o las <b>Flashcards</b>, y después probá la <b>Trivia</b>, <b>Pasado, presente y futuro</b> y los arcades para ver cuánto te acordás. Cada partida te da XP para subir de nivel.',
+    tip: 'arrancá por el <b>Resumen</b> o las <b>Flashcards</b>, y después probá la <b>Trivia</b>, el <b>Detective de palabras</b>, <b>Pasado, presente y futuro</b> y los arcades para ver cuánto te acordás. Cada partida te da XP para subir de nivel.',
     source: 'Lengua — apuntes de clase',
     storeKey: 'estudioSanti.lengua.v1',
     LEVELS,
@@ -516,6 +733,6 @@
       hint: 'Mirá el verbo y tocá las oraciones <b>en orden</b>: primero el pasado, después el presente y al final el futuro.',
       art: 'las', noun: 'oraciones'
     },
-    MATCH_ROUNDS, FLASHCARDS, CLASSIFY_GAMES, GAMES
+    MATCH_ROUNDS, FLASHCARDS, CLASSIFY_GAMES, DETECTIVE, GAMES
   };
 })(window.APP);

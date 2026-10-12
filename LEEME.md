@@ -2,8 +2,10 @@
 
 App web de una sola página para repasar dos materias:
 
-- **Ciencias Sociales** · "Pueblos originarios de Santa Fe". Todo el contenido
-  sale del resumen `pueblos_originarios_de_santa_fe.md`.
+- **Ciencias Sociales** · "Pueblos originarios de Santa Fe" y "Recursos naturales". El contenido
+  sale del resumen `pueblos_originarios_de_santa_fe.md` y de la fotocopia
+  `recursos-naturales.jpg` (al arcade de recursos se le sumaron ejemplos de
+  cosas hechas por el hombre: auto, casa, lápiz…).
 - **Lengua** · textos humorísticos, verbos, sustantivos, género y número, y
   adjetivos. El contenido sale de `apuntes_de_lengua.md`; para que los juegos
   tengan material se sumaron algunos ejemplos más de los mismos conceptos
@@ -34,18 +36,35 @@ npx serve .
 
 | Juego | Qué practica |
 |---|---|
-| 🧠 **Trivia contrarreloj** | 10 preguntas al azar de un banco de 57. Reloj de 20 s, racha con multiplicador y explicación después de cada respuesta. |
+| 🧠 **Trivia contrarreloj** | 10 preguntas al azar de un banco de 68. Reloj de 20 s, racha con multiplicador y explicación después de cada respuesta. |
 | 🕰️ **Línea de tiempo** | 3 rondas: hay que tocar los hechos del más antiguo al más nuevo (nómades → sedentarios → Solís 1516 → fundación 1573 → traslado 1649; y 1993 → 2005 → 2020 → hoy). La fecha se revela al acertar. |
-| 🔗 **Unir con flechas** | 4 rondas al azar de 6 (dónde vivía cada pueblo, palabras clave, fechas, pueblos de hoy, casas y caciques, números). Cada par resuelto queda con su propio **color y número**. |
-| 🃏 **Flashcards** | 30 tarjetas con volteo 3D, en 5 mazos. Se pueden marcar como "ya la sé" y queda guardado. |
+| 🔗 **Unir con flechas** | 4 rondas al azar de 7 (dónde vivía cada pueblo, palabras clave, fechas, pueblos de hoy, casas y caciques, números, recursos naturales). Cada par resuelto queda con su propio **color y número**. |
+| 🃏 **Flashcards** | 36 tarjetas con volteo 3D, en 6 mazos. Se pueden marcar como "ya la sé" y queda guardado. |
 | ⚡ **Cazador de Pueblos** | Arcade: caen tarjetas y hay que tirarlas al balde Guaycurú / Chaná-Timbú / Guaraníes. 3 vidas, combos y reloj de 9 s. |
 | 🥾 **¿Nómade o sedentario?** | Mismo arcade, con dos baldes: Nómades / Sedentarios. |
+| 🍃 **¿Es un recurso natural?** | Mismo arcade: Recurso natural / Lo hizo el hombre. |
 
 En **Lengua** están la Trivia (49 preguntas), Unir con flechas (8 rondas),
 Flashcards (25), **Pasado, presente y futuro** (ordenar la misma oración en los
 tres tiempos) y tres arcades: **Cazador de adjetivos** (calificativo /
 gentilicio / numeral / ordinal), **¿Abstracto o concreto?** y **¿Pasado,
 presente o futuro?**.
+
+🔎 **Detective de palabras** (Lengua): aparece una oración con una palabra
+marcada. Primero hay que decir si es sustantivo, verbo o adjetivo, y después
+contestar dos pistas más sobre esa palabra:
+
+- **Sustantivo:** común o propio, abstracto o concreto, individual o colectivo,
+  contable o no contable, género y número.
+- **Verbo:** tiempo verbal (pasado, presente o futuro) y su raíz, su desinencia
+  o cómo se separa en raíz | desinencia.
+- **Adjetivo:** tipo (calificativo, gentilicio, numeral u ordinal) y a qué
+  sustantivo acompaña.
+
+Cada partida tiene 6 palabras (2 de cada clase) elegidas al azar de un banco de
+81 oraciones, o sea 18 preguntas. Las preguntas se arman solas en `lengua.js`
+(sección *Detective de palabras*): para sumar ejemplos alcanza con agregar una
+línea a `D_SUSTANTIVOS`, `D_VERBOS` o `D_ADJETIVOS`.
 
 En las dos materias hay un **Resumen para leer** con la ficha de datos, el texto por secciones
 y el cuadro de los tres pueblos.
