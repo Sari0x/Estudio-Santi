@@ -1,8 +1,17 @@
-# Pueblos originarios de Santa Fe — juegos de estudio
+# Estudio Santi — juegos de estudio
 
-App web de una sola página para repasar el tema de **Ciencias Sociales**
-"Pueblos originarios de Santa Fe". Todo el contenido sale del resumen
-`pueblos_originarios_de_santa_fe.md` (no se agregó información de otras fuentes).
+App web de una sola página para repasar dos materias:
+
+- **Ciencias Sociales** · "Pueblos originarios de Santa Fe". Todo el contenido
+  sale del resumen `pueblos_originarios_de_santa_fe.md`.
+- **Lengua** · textos humorísticos, verbos, sustantivos, género y número, y
+  adjetivos. El contenido sale de `apuntes_de_lengua.md`; para que los juegos
+  tengan material se sumaron algunos ejemplos más de los mismos conceptos
+  (otros verbos conjugados, sustantivos abstractos/concretos y adjetivos).
+
+Al abrir la app se elige la materia. Desde la barra de arriba se puede pasar
+de una a otra en cualquier momento. Cada materia guarda su propio progreso
+(estrellas, XP, nivel y flashcards sabidas).
 
 ## Cómo abrirla
 
@@ -32,7 +41,13 @@ npx serve .
 | ⚡ **Cazador de Pueblos** | Arcade: caen tarjetas y hay que tirarlas al balde Guaycurú / Chaná-Timbú / Guaraníes. 3 vidas, combos y reloj de 9 s. |
 | 🥾 **¿Nómade o sedentario?** | Mismo arcade, con dos baldes: Nómades / Sedentarios. |
 
-Además hay un **Resumen para leer** con la ficha de datos, el texto por secciones
+En **Lengua** están la Trivia (49 preguntas), Unir con flechas (8 rondas),
+Flashcards (25), **Pasado, presente y futuro** (ordenar la misma oración en los
+tres tiempos) y tres arcades: **Cazador de adjetivos** (calificativo /
+gentilicio / numeral / ordinal), **¿Abstracto o concreto?** y **¿Pasado,
+presente o futuro?**.
+
+En las dos materias hay un **Resumen para leer** con la ficha de datos, el texto por secciones
 y el cuadro de los tres pueblos.
 
 ## Estrellas, XP y niveles
@@ -47,7 +62,7 @@ y el cuadro de los tres pueblos.
 ## Detalles
 
 - **Progreso guardado** en el navegador (`localStorage`). El tacho de basura de
-  arriba a la derecha lo borra todo.
+  arriba a la derecha borra el progreso de la materia que estás viendo.
 - **Sonido con [Howler.js](https://howlerjs.com/)**: música de fondo (ondas alfa, en
   bucle) y efectos en cada click, al acertar, al errar, al volver atrás, al dar
   vuelta una tarjeta, al agarrar una ficha y al subir de nivel. El botón del
@@ -66,7 +81,8 @@ y el cuadro de los tres pueblos.
 ```
 index.html   Estructura + componentes de React (JSX inline, así funciona con file://)
 styles.css   Tema visual, animaciones, tarjeta con volteo 3D, línea de tiempo, drag & drop
-app.js       Datos del resumen (trivia, línea de tiempo, pares, flashcards, baldes) + utilidades
+app.js       Utilidades + datos de Ciencias Sociales (trivia, línea de tiempo, pares, flashcards, baldes)
+lengua.js    Datos de Lengua, con la misma forma
 audio/       musica.mp3 (20 min recortados del original, 96 kbps) y efectos.mp3 (todos los efectos)
 icons/       Íconos de la app hechos con estudio.png (normales y "maskable" para Android)
 manifest.webmanifest, sw.js   Lo que hace falta para instalarla en el celular
@@ -75,6 +91,6 @@ manifest.webmanifest, sw.js   Lo que hace falta para instalarla en el celular
 > El archivo original de la música pesa 1 GB (12 horas), así que no se sube a
 > GitHub (está en `.gitignore`). La app usa el recorte de `audio/musica.mp3`.
 
-Para agregar o corregir contenido, todo el material está en `app.js`:
-`TRIVIA`, `TIMELINE_ROUNDS`, `MATCH_ROUNDS`, `FLASHCARDS`, `CLASSIFY_GAMES`,
-`FICHA`, `RESUMEN` y `PUEBLOS_TABLA`.
+Para agregar o corregir contenido: Sociales está en `app.js` y Lengua en `lengua.js`
+(`TRIVIA`, `TIMELINE_ROUNDS`, `MATCH_ROUNDS`, `FLASHCARDS`, `CLASSIFY_GAMES`, `FICHA`,
+`RESUMEN` y la tabla del resumen). Cada materia se arma al final de su archivo.

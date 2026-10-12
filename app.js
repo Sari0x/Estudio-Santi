@@ -1,12 +1,14 @@
 /* =======================================================================
-   ESTUDIO SANTI · "Pueblos originarios de Santa Fe"
-   Ciencias Sociales — contenido de pueblos_originarios_de_santa_fe.md
+   ESTUDIO SANTI · juegos de estudio
 
-   app.js  ->  1) DATOS del resumen (banco de contenido educativo)
-               2) UTILIDADES (sonido con Howler.js, confeti, vibración, storage)
+   app.js    ->  1) UTILIDADES (sonido con Howler.js, confeti, vibración, storage)
+                 2) MATERIA "Ciencias Sociales": "Pueblos originarios de Santa Fe"
+                    (contenido de pueblos_originarios_de_santa_fe.md)
+   lengua.js ->  MATERIA "Lengua" (contenido de apuntes_de_lengua.md)
 
    Todo se expone en el objeto global `window.APP` para que index.html
-   (donde viven los componentes de React) lo consuma.
+   (donde viven los componentes de React) lo consuma. Cada materia vive en
+   `APP.SUBJECTS[id]` con sus propios datos, juegos, niveles y progreso.
    ======================================================================= */
 
 window.APP = (function () {
@@ -212,37 +214,59 @@ window.APP = (function () {
     };
   })();
 
-  /* ------------------------- Progreso guardado -------------------------- */
-  const STORE_KEY = 'estudioSanti.pueblos.v1';
+  /* ------------------------- Progreso guardado --------------------------
+     Cada materia guarda su progreso por separado (su propia clave en
+     localStorage). El sonido y la última materia elegida van aparte, en
+     las "preferencias", y valen para toda la app. */
   const DEFAULT_STATE = {
     xp: 0,
-    musicMuted: false,
-    sfxMuted: false,
     bestStars: {},   // { trivia: 3, tiempo: 2, ... }
     bestScore: {},   // { trivia: 1250, ... }
     played: {},      // { trivia: 4, ... }  cantidad de partidas
     knownCards: []   // ids de flashcards marcadas como "ya la sé"
   };
 
-  const store = {
-    get() {
-      try {
-        const raw = localStorage.getItem(STORE_KEY);
-        return raw ? Object.assign({}, DEFAULT_STATE, JSON.parse(raw)) : Object.assign({}, DEFAULT_STATE);
-      } catch (e) {
-        return Object.assign({}, DEFAULT_STATE);
+  /** Lectura/escritura de un objeto JSON en localStorage, con valores por defecto. */
+  function makeStore(key, defaults) {
+    return {
+      get() {
+        try {
+          const raw = localStorage.getItem(key);
+          return Object.assign({}, defaults, raw ? JSON.parse(raw) : {});
+        } catch (e) {
+          return Object.assign({}, defaults);
+        }
+      },
+      set(patch) {
+        const next = Object.assign(this.get(), patch);
+        try { localStorage.setItem(key, JSON.stringify(next)); } catch (e) { /* modo privado */ }
+        return next;
+      },
+      reset() {
+        try { localStorage.removeItem(key); } catch (e) { /* ignorar */ }
+        return Object.assign({}, defaults);
       }
-    },
-    set(patch) {
-      const next = Object.assign(this.get(), patch);
-      try { localStorage.setItem(STORE_KEY, JSON.stringify(next)); } catch (e) { /* modo privado */ }
-      return next;
-    },
-    reset() {
-      try { localStorage.removeItem(STORE_KEY); } catch (e) { /* ignorar */ }
-      return Object.assign({}, DEFAULT_STATE);
-    }
-  };
+    };
+  }
+
+  /** Progreso de una materia (se crea una sola vez por materia). */
+  const stores = {};
+  function storeFor(subjectId) {
+    if (!stores[subjectId]) stores[subjectId] = makeStore(SUBJECTS[subjectId].storeKey, DEFAULT_STATE);
+    return stores[subjectId];
+  }
+
+  /* Preferencias generales. Antes el sonido se guardaba junto con el
+     progreso de Sociales: si existe, lo tomamos de ahí la primera vez. */
+  const prefs = makeStore('estudioSanti.prefs.v1', (function () {
+    const d = { musicMuted: false, sfxMuted: false, subject: null };
+    try {
+      const old = JSON.parse(localStorage.getItem('estudioSanti.pueblos.v1') || '{}');
+      if (typeof old.musicMuted === 'boolean') d.musicMuted = old.musicMuted;
+      if (typeof old.sfxMuted === 'boolean') d.sfxMuted = old.sfxMuted;
+    } catch (e) { /* ignorar */ }
+    return d;
+  })());
 
   /** Convierte un porcentaje de acierto en estrellas (0 a 3). */
   function starsFor(pct) {
@@ -263,19 +287,22 @@ window.APP = (function () {
     'Ups, esa no era. ¡La próxima sale!'
   ];
   const FINAL_MSG = [
-    { min: 0.9, t: '¡Sos un experto en pueblos originarios! 🏆', d: 'Dominás el tema de punta a punta.' },
+    { min: 0.9, t: (expert) => '¡Sos un experto en ' + expert + '! 🏆', d: 'Dominás el tema de punta a punta.' },
     { min: 0.7, t: '¡Muy buen trabajo! 🌟', d: 'Casi todo perfecto. Repasá los datos que fallaste y sos imparable.' },
     { min: 0.5, t: '¡Vas por buen camino! 💪', d: 'Ya sabés más de la mitad. Una vuelta más y lo tenés.' },
     { min: 0,   t: '¡Buen comienzo! 🚀', d: 'Pasá por las Flashcards y volvé a jugar: vas a ver la diferencia.' }
   ];
-  function finalMessage(pct) {
-    return FINAL_MSG.find((m) => pct >= m.min);
+  /** Mensaje final según el porcentaje. `expert`: de qué tema (ej. "Lengua"). */
+  function finalMessage(pct, expert) {
+    const m = FINAL_MSG.find((x) => pct >= x.min);
+    return { t: typeof m.t === 'function' ? m.t(expert) : m.t, d: m.d };
   }
 
 
   /* ------------------------------ Niveles -------------------------------
-     El XP que se gana jugando hace subir de nivel. */
-  const LEVELS = [
+     El XP que se gana jugando hace subir de nivel. Cada materia tiene su
+     propia lista de niveles (estos son los de Sociales). */
+  const LEVELS_SOCIALES = [
     { min: 0,    name: 'Aprendiz',              icon: '🌱' },
     { min: 60,   name: 'Explorador',            icon: '🧭' },
     { min: 150,  name: 'Rastreador',            icon: '🔎' },
@@ -284,11 +311,11 @@ window.APP = (function () {
     { min: 800,  name: 'Sabio de los pueblos',  icon: '🦉' },
     { min: 1200, name: 'Gran cacique del saber', icon: '👑' }
   ];
-  /** Nivel actual a partir del XP: { n, name, icon, min, next } */
-  function levelFor(xp) {
+  /** Nivel actual a partir del XP y la lista de niveles: { n, name, icon, min, next } */
+  function levelFor(xp, levels) {
     let k = 0;
-    while (k + 1 < LEVELS.length && xp >= LEVELS[k + 1].min) k++;
-    const cur = LEVELS[k], nxt = LEVELS[k + 1];
+    while (k + 1 < levels.length && xp >= levels[k + 1].min) k++;
+    const cur = levels[k], nxt = levels[k + 1];
     return { n: k + 1, name: cur.name, icon: cur.icon, min: cur.min, next: nxt ? nxt.min : null };
   }
 
@@ -750,30 +777,62 @@ window.APP = (function () {
      SECCIÓN 8 · CATÁLOGO DE JUEGOS (para el menú principal)
      ===================================================================== */
   const GAMES = [
-    { id: 'trivia',   name: 'Trivia contrarreloj', icon: 'fa-brain',
+    { id: 'trivia',   type: 'trivia', name: 'Trivia contrarreloj', icon: 'fa-brain',
       desc: '10 preguntas con reloj, racha y puntos extra.', tint: 'from-indigo-500 to-violet-600' },
-    { id: 'tiempo',   name: 'Línea de tiempo', icon: 'fa-timeline',
+    { id: 'tiempo',   type: 'timeline', name: 'Línea de tiempo', icon: 'fa-timeline',
       desc: 'Ordená los hechos del más antiguo al más nuevo.', tint: 'from-sky-500 to-cyan-600' },
-    { id: 'unir',     name: 'Unir con flechas', icon: 'fa-diagram-project',
+    { id: 'unir',     type: 'match', name: 'Unir con flechas', icon: 'fa-diagram-project',
       desc: 'Arrastrá cada concepto hasta su definición.', tint: 'from-emerald-500 to-teal-600' },
-    { id: 'cartas',   name: 'Flashcards', icon: 'fa-clone',
+    { id: 'cartas',   type: 'cards', name: 'Flashcards', icon: 'fa-clone',
       desc: 'Repaso rápido: tocá la tarjeta para darla vuelta.', tint: 'from-amber-500 to-orange-600' },
-    { id: 'pueblos',  name: 'Cazador de Pueblos', icon: 'fa-bolt',
+    { id: 'pueblos',  type: 'classify', name: 'Cazador de Pueblos', icon: 'fa-bolt',
       desc: '¡Arcade! ¿Guaycurú, Chaná-Timbú o Guaraní? Clasificá antes de que se acabe el tiempo.', tint: 'from-fuchsia-500 to-pink-600' },
-    { id: 'nomades',  name: '¿Nómade o sedentario?', icon: 'fa-person-hiking',
+    { id: 'nomades',  type: 'classify', name: '¿Nómade o sedentario?', icon: 'fa-person-hiking',
       desc: '¡Arcade! Tirá cada tarjeta al balde correcto.', tint: 'from-rose-500 to-orange-500' },
-    { id: 'resumen',  name: 'Resumen para leer', icon: 'fa-book-open',
+    { id: 'resumen',  type: 'resumen', name: 'Resumen para leer', icon: 'fa-book-open',
       desc: 'Todo el tema ordenado, para repasar antes de jugar.', tint: 'from-slate-500 to-slate-700' }
   ];
+
+  /* =====================================================================
+     SECCIÓN 9 · MATERIAS
+     Cada materia junta sus datos con los textos que cambian de una a otra.
+     Lengua se agrega desde lengua.js con la misma forma.
+     ===================================================================== */
+  const SUBJECTS = {
+    sociales: {
+      id: 'sociales',
+      name: 'Ciencias Sociales',
+      short: 'Sociales',
+      icon: 'fa-earth-americas',
+      tint: 'from-indigo-500 to-violet-600',
+      heroText: 'from-indigo-600 via-violet-600 to-sky-500',
+      topic: 'Pueblos originarios de Santa Fe',
+      intro: 'Quiénes vivían acá antes de los españoles, cómo vivían, la conquista, los pueblos de hoy y las escuelas interculturales bilingües. ¡Elegí un juego y a jugar!',
+      expert: 'pueblos originarios',
+      tip: 'arrancá por el <b>Resumen</b> o las <b>Flashcards</b>, y después probá la <b>Trivia</b>, la <b>Línea de tiempo</b> y los arcades para ver cuánto te acordás. Cada partida te da XP para subir de nivel.',
+      source: 'Ciencias Sociales — “Pueblos originarios de Santa Fe”',
+      storeKey: 'estudioSanti.pueblos.v1',   // la clave de siempre: no se pierde el progreso anterior
+      LEVELS: LEVELS_SOCIALES,
+      FICHA, RESUMEN,
+      TABLA: { title: 'Los pueblos antes de los españoles', cols: ['Cultura', '¿Dónde?', '¿Cómo vivían?'], rows: PUEBLOS_TABLA },
+      TRIVIA,
+      TIMELINE: {
+        rounds: TIMELINE_ROUNDS,
+        hint: 'Tocá los hechos <b>en orden</b>: primero el más antiguo, al final el más nuevo.',
+        art: 'los', noun: 'hechos'
+      },
+      MATCH_ROUNDS, FLASHCARDS, CLASSIFY_GAMES, GAMES
+    }
+  };
 
   /* =====================================================================
      EXPORTACIÓN
      ===================================================================== */
   return {
     // utilidades
-    shuffle, pick, sfx, vibrate, confetti, store, starsFor, levelFor,
+    shuffle, pick, sfx, vibrate, confetti, storeFor, prefs, starsFor, levelFor,
     PRAISE, ENCOURAGE, finalMessage,
-    // datos
-    FICHA, RESUMEN, PUEBLOS_TABLA, TRIVIA, TIMELINE_ROUNDS, MATCH_ROUNDS, FLASHCARDS, CLASSIFY_GAMES, GAMES
+    // materias (lengua.js agrega la suya)
+    SUBJECTS
   };
 })();

@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-  <meta name="description" content="Juegos para estudiar los pueblos originarios de Santa Fe — Ciencias Sociales" />
+  <meta name="description" content="Juegos para estudiar Ciencias Sociales (pueblos originarios de Santa Fe) y Lengua" />
   <meta name="theme-color" content="#6366f1" />
-  <title>Pueblos originarios de Santa Fe · Juegos de estudio</title>
+  <title>Estudio Santi · Juegos de estudio</title>
 
   <!-- App instalable (Android: "Agregar a la pantalla principal") -->
   <link rel="manifest" href="manifest.webmanifest" />
@@ -53,15 +53,21 @@
   <!-- Howler.js: música de fondo y efectos de sonido -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 
-  <!-- Datos del resumen + utilidades -->
+  <!-- Utilidades + materias (Sociales en app.js, Lengua en lengua.js) -->
   <script src="app.js"></script>
+  <script src="lengua.js"></script>
 
   <!-- ==================================================================
        APLICACIÓN (React). Está inline a propósito: así el archivo funciona
        con doble clic (file://) sin necesidad de un servidor local.
        =================================================================== -->
   <script type="text/babel" data-presets="react">
-  const { useState, useEffect, useRef, useMemo, useCallback } = React;
+  const { useState, useEffect, useRef, useMemo, useCallback, useContext } = React;
+
+  /* Materia elegida (Sociales o Lengua): todos los juegos toman sus datos
+     de acá, así el mismo juego sirve para las dos. */
+  const SubjectContext = React.createContext(null);
+  const useSubject = () => useContext(SubjectContext);
 
   /* ==================================================================
      0 · EFECTOS VISUALES IMPERATIVOS (destellos y puntos flotantes)
@@ -160,9 +166,10 @@
 
   /** Pantalla de resultados, común a todos los juegos. */
   function ResultScreen({ title, score, correct, total, extra, onRetry, onExit }) {
+    const S = useSubject();
     const pct = total ? correct / total : 0;
     const stars = APP.starsFor(pct);
-    const msg = APP.finalMessage(pct);
+    const msg = APP.finalMessage(pct, S.expert);
 
     useEffect(() => {
       if (stars >= 2) { APP.confetti(160); APP.sfx.play('win'); }
@@ -222,10 +229,11 @@
      2 · JUEGO 1 · TRIVIA CONTRARRELOJ
      ================================================================== */
   function Trivia({ onFinish, onExit }) {
+    const S = useSubject();
     const TOTAL = 10, QTIME = 20;
 
     const [qs] = useState(() =>
-      APP.pick(APP.TRIVIA, TOTAL).map((q) => ({ ...q, opts: APP.shuffle([q.ok].concat(q.bad)) }))
+      APP.pick(S.TRIVIA, TOTAL).map((q) => ({ ...q, opts: APP.shuffle([q.ok].concat(q.bad)) }))
     );
     const [i, setI]           = useState(0);
     const [chosen, setChosen] = useState(null);   // texto elegido, o '__timeout__'
@@ -355,8 +363,9 @@
      más antiguo al más nuevo. Al acertar, el hecho baja a la línea de
      tiempo y se revela su fecha.
      ================================================================== */
-  function TimelineGame({ onFinish, onExit }) {
-    const rounds = APP.TIMELINE_ROUNDS;
+  function TimelineGame({ title, onFinish, onExit }) {
+    const S = useSubject();
+    const rounds = S.TIMELINE.rounds;
     const TOTAL = rounds.reduce((a, x) => a + x.events.length, 0);
 
     const [r, setR]           = useState(0);
@@ -404,7 +413,7 @@
     }
 
     if (done) {
-      return <ResultScreen title="Línea de tiempo" score={score} correct={correct} total={TOTAL}
+      return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
         extra={<p className="text-sm text-slate-500">Toques equivocados: <b>{errors}</b></p>}
         onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
         onExit={() => onFinish({ score, correct, total: TOTAL })} />;
@@ -412,7 +421,7 @@
 
     return (
       <div className="no-touch-zoom">
-        <GameHeader title="Línea de tiempo" subtitle={'Ronda ' + (r + 1) + ' de ' + rounds.length + ' · ' + round.title}
+        <GameHeader title={title} subtitle={'Ronda ' + (r + 1) + ' de ' + rounds.length + ' · ' + round.title}
           onExit={onExit} progress={{ v: rounds.slice(0, r).reduce((a, x) => a + x.events.length, 0) + placed, m: TOTAL }}
           right={<div className="text-right">
             <p className="font-black text-sky-600 leading-none">{score}</p>
@@ -420,9 +429,10 @@
           </div>} />
 
         <div className="card p-4 sm:p-6 anim-fadeup" key={r}>
+          {/* La consigna es texto fijo de la materia (con <b>), no viene de afuera. */}
           <p className="text-xs sm:text-sm text-slate-500 mb-4">
             <i className="fa-solid fa-hand-pointer mr-1 text-sky-500" />
-            Tocá los hechos <b>en orden</b>: primero el más antiguo, al final el más nuevo.
+            <span dangerouslySetInnerHTML={{ __html: S.TIMELINE.hint }} />
           </p>
 
           {/* Línea de tiempo */}
@@ -458,7 +468,7 @@
           {roundDone && (
             <div className="rounded-2xl p-4 mt-6 bg-emerald-50 border-2 border-emerald-200 anim-pop text-center">
               <p className="font-black text-emerald-700 text-lg">¡Línea completa! {praise()}</p>
-              <p className="text-sm text-slate-600 mt-1">Ordenaste los {round.events.length} hechos de “{round.title}”.</p>
+              <p className="text-sm text-slate-600 mt-1">Ordenaste {S.TIMELINE.art} {round.events.length} {S.TIMELINE.noun} de “{round.title}”.</p>
               <button className="btn btn-primary mt-3" onClick={nextRound}>
                 {r + 1 >= rounds.length ? 'Ver resultado' : 'Siguiente ronda'} <i className="fa-solid fa-arrow-right" />
               </button>
@@ -483,7 +493,8 @@
   const PAIR_COLORS = ['#10b981', '#6366f1', '#f59e0b', '#ec4899', '#0ea5e9', '#8b5cf6'];
 
   function MatchGame({ onFinish, onExit }) {
-    const [rounds] = useState(() => APP.pick(APP.MATCH_ROUNDS, 4));
+    const S = useSubject();
+    const [rounds] = useState(() => APP.pick(S.MATCH_ROUNDS, 4));
     const [r, setR] = useState(0);
     const round = rounds[r];
     const TOTAL = rounds.reduce((a, x) => a + x.pairs.length, 0);
@@ -764,21 +775,23 @@
      5 · JUEGO 4 · FLASHCARDS
      ================================================================== */
   function Flashcards({ onExit, onXp }) {
+    const S = useSubject();
+    const store = APP.storeFor(S.id);
     const decks = useMemo(() => {
       const names = [];
-      APP.FLASHCARDS.forEach((c) => { if (names.indexOf(c.deck) === -1) names.push(c.deck); });
+      S.FLASHCARDS.forEach((c) => { if (names.indexOf(c.deck) === -1) names.push(c.deck); });
       return ['Todas'].concat(names);
     }, []);
 
     const [deck, setDeck]   = useState('Todas');
-    const [cards, setCards] = useState(() => APP.FLASHCARDS.slice());
+    const [cards, setCards] = useState(() => S.FLASHCARDS.slice());
     const [i, setI]         = useState(0);
     const [flipped, setFlipped] = useState(false);
-    const [known, setKnown] = useState(() => APP.store.get().knownCards || []);
+    const [known, setKnown] = useState(() => store.get().knownCards || []);
 
     function loadDeck(name) {
       setDeck(name);
-      setCards(name === 'Todas' ? APP.FLASHCARDS.slice() : APP.FLASHCARDS.filter((c) => c.deck === name));
+      setCards(name === 'Todas' ? S.FLASHCARDS.slice() : S.FLASHCARDS.filter((c) => c.deck === name));
       setI(0); setFlipped(false);
     }
 
@@ -793,7 +806,7 @@
       if (!card) return;
       const next = known.indexOf(card.id) === -1 ? known.concat(card.id) : known.filter((x) => x !== card.id);
       setKnown(next);
-      APP.store.set({ knownCards: next });
+      store.set({ knownCards: next });
       if (known.indexOf(card.id) === -1) {
         APP.sfx.play('correct');
         APP.confetti(20);
@@ -870,7 +883,7 @@
      3 vidas, combos y puntaje.
      ================================================================== */
   function ClassifyGame({ kind, onFinish, onExit }) {
-    const cfg = APP.CLASSIFY_GAMES[kind];
+    const cfg = useSubject().CLASSIFY_GAMES[kind];
     const TIME = 9;
     const [queue] = useState(() => APP.pick(cfg.items, Math.min(18, cfg.items.length)));
     const TOTAL = queue.length;
@@ -1074,14 +1087,16 @@
      7 · RESUMEN PARA LEER
      ================================================================== */
   function Resumen({ onExit }) {
+    const S = useSubject();
+    const tabla = S.TABLA;
     return (
       <div>
-        <GameHeader title="Resumen para leer" subtitle="Pueblos originarios de Santa Fe" onExit={onExit} />
+        <GameHeader title="Resumen para leer" subtitle={S.name + ' · ' + S.topic} onExit={onExit} />
 
         <div className="card p-4 sm:p-6">
           <h3 className="font-black text-lg mb-3"><i className="fa-solid fa-table-list text-indigo-500 mr-2" />Ficha rápida</h3>
           <dl className="grid sm:grid-cols-2 gap-2.5">
-            {APP.FICHA.map((f) => (
+            {S.FICHA.map((f) => (
               <div key={f.k} className="rounded-2xl bg-indigo-50/60 p-3">
                 <dt className="text-[11px] font-black uppercase tracking-wide text-indigo-400">{f.k}</dt>
                 <dd className="font-bold text-sm text-slate-700 mt-0.5">{f.v}</dd>
@@ -1090,7 +1105,7 @@
           </dl>
         </div>
 
-        {APP.RESUMEN.map((s) => (
+        {S.RESUMEN.map((s) => (
           <div key={s.t} className="card p-4 sm:p-6 mt-4">
             <h4 className="font-black text-indigo-600 mb-2">{s.t}</h4>
             <ul className="space-y-2">
@@ -1103,30 +1118,32 @@
           </div>
         ))}
 
-        <div className="card p-4 sm:p-5 mt-4">
-          <h4 className="font-black text-indigo-600 mb-3">Los pueblos antes de los españoles</h4>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[34rem]">
-              <thead>
-                <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400">
-                  <th className="py-2 pr-3">Cultura</th><th className="py-2 pr-3">¿Dónde?</th><th className="py-2">¿Cómo vivían?</th>
-                </tr>
-              </thead>
-              <tbody>
-                {APP.PUEBLOS_TABLA.map((r) => (
-                  <tr key={r[0]} className="border-t border-slate-100 align-top">
-                    <td className="py-2.5 pr-3 font-black text-indigo-700 whitespace-nowrap">{r[0]}</td>
-                    <td className="py-2.5 pr-3 text-slate-600">{r[1]}</td>
-                    <td className="py-2.5 text-slate-600">{r[2]}</td>
+        {tabla && (
+          <div className="card p-4 sm:p-5 mt-4">
+            <h4 className="font-black text-indigo-600 mb-3">{tabla.title}</h4>
+            <div className="overflow-x-auto">
+              <table className={'w-full text-sm ' + (tabla.cols.length > 2 ? 'min-w-[34rem]' : '')}>
+                <thead>
+                  <tr className="text-left text-[11px] uppercase tracking-wide text-slate-400">
+                    {tabla.cols.map((c) => <th key={c} className="py-2 pr-3">{c}</th>)}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {tabla.rows.map((r) => (
+                    <tr key={r[0]} className="border-t border-slate-100 align-top">
+                      {r.map((cell, k) => (
+                        <td key={k} className={'py-2.5 pr-3 ' + (k === 0 ? 'font-black text-indigo-700' + (tabla.cols.length > 2 ? ' whitespace-nowrap' : '') : 'text-slate-600')}>{cell}</td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
         <p className="text-center text-xs text-slate-400 my-6">
-          Contenido tomado del resumen “Ciencias Sociales: Pueblos originarios de Santa Fe”.
+          Contenido tomado de: {S.source}.
         </p>
       </div>
     );
@@ -1135,12 +1152,21 @@
   /* ==================================================================
      8 · MENÚ PRINCIPAL
      ================================================================== */
-  /* Juegos que dan estrellas (las Flashcards y el Resumen no). */
-  const STAR_GAMES = APP.GAMES.filter((g) => g.id !== 'resumen' && g.id !== 'cartas');
+  /** Juegos que dan estrellas (las Flashcards y el Resumen no). */
+  const isScored = (g) => g.type !== 'resumen' && g.type !== 'cards';
+
+  /** Estrellas ganadas en una materia: { total, max }. */
+  function starsOf(S, progress) {
+    const games = S.GAMES.filter(isScored);
+    return {
+      total: games.reduce((a, g) => a + (progress.bestStars[g.id] || 0), 0),
+      max: games.length * 3
+    };
+  }
 
   /** Tarjeta con el nivel actual y lo que falta para el próximo. */
   function LevelCard({ xp }) {
-    const lv = APP.levelFor(xp);
+    const lv = APP.levelFor(xp, useSubject().LEVELS);
     return (
       <div className="rounded-2xl bg-white/70 border border-indigo-100 p-3 mt-5 max-w-sm">
         <div className="flex items-center gap-3">
@@ -1160,24 +1186,22 @@
   }
 
   function Home({ progress, onPlay }) {
-    const totalStars = STAR_GAMES.reduce((a, g) => a + (progress.bestStars[g.id] || 0), 0);
-    const maxStars = STAR_GAMES.length * 3;
+    const S = useSubject();
+    const { total: totalStars, max: maxStars } = starsOf(S, progress);
     const knownCount = (progress.knownCards || []).length;
 
     return (
       <div>
         {/* Hero */}
-        <div className="card p-5 sm:p-8 mb-5 overflow-hidden relative anim-pop">
+        <div className="card p-5 sm:p-8 mb-5 overflow-hidden relative anim-pop" key={S.id}>
           <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-indigo-100/70 blur-2xl" />
           <div className="absolute -left-8 bottom-0 w-36 h-36 rounded-full bg-amber-100/60 blur-2xl" />
           <div className="relative">
-            <Chip icon="fa-graduation-cap">Ciencias Sociales</Chip>
-            <h1 className="text-3xl sm:text-5xl font-black mt-3 leading-none bg-gradient-to-br from-indigo-600 via-violet-600 to-sky-500 bg-clip-text text-transparent">
-              Pueblos originarios de Santa Fe
+            <Chip icon={S.icon}>{S.name}</Chip>
+            <h1 className={'text-3xl sm:text-5xl font-black mt-3 leading-none bg-gradient-to-br bg-clip-text text-transparent ' + S.heroText}>
+              {S.topic}
             </h1>
-            <p className="text-slate-500 mt-2 max-w-lg">
-              Quiénes vivían acá antes de los españoles, cómo vivían, la conquista, los pueblos de hoy y las escuelas interculturales bilingües. ¡Elegí un juego y a jugar!
-            </p>
+            <p className="text-slate-500 mt-2 max-w-lg">{S.intro}</p>
 
             <div className="flex flex-wrap items-center gap-4 mt-5">
               <div className="flex items-center gap-2">
@@ -1193,10 +1217,10 @@
 
         {/* Tarjetas de juego */}
         <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-3 stagger">
-          {APP.GAMES.map((g) => {
+          {S.GAMES.map((g) => {
             const st = progress.bestStars[g.id];
             const plays = progress.played[g.id] || 0;
-            const scored = g.id !== 'resumen' && g.id !== 'cartas';
+            const scored = isScored(g);
             return (
               <button key={g.id} data-sfx="open" className="card card-hover p-5 text-left flex flex-col"
                       onClick={() => onPlay(g.id)}>
@@ -1206,10 +1230,10 @@
                 <h3 className="font-black text-lg leading-tight">{g.name}</h3>
                 <p className="text-sm text-slate-500 mt-1 flex-1">{g.desc}</p>
                 <div className="flex items-center justify-between mt-4">
-                  {g.id === 'resumen'
+                  {g.type === 'resumen'
                     ? <span className="text-xs font-bold text-slate-400">Sin puntaje · sólo leer</span>
-                    : g.id === 'cartas'
-                      ? <span className="text-xs font-bold text-amber-600">{knownCount}/{APP.FLASHCARDS.length} ya las sé</span>
+                    : g.type === 'cards'
+                      ? <span className="text-xs font-bold text-amber-600">{knownCount}/{S.FLASHCARDS.length} ya las sé</span>
                       : <Stars n={st || 0} size="sm" />}
                   <span className="text-xs font-black text-indigo-500">
                     {plays > 0 && scored && <span className="text-slate-400 mr-2">{plays} partida{plays > 1 ? 's' : ''}</span>}
@@ -1223,10 +1247,74 @@
 
         <div className="card p-4 mt-5 flex items-start gap-3 bg-amber-50/70 border-amber-200">
           <i className="fa-solid fa-lightbulb text-amber-500 text-xl mt-0.5" />
+          {/* El consejo es texto fijo de la materia (con <b>), no viene de afuera. */}
           <p className="text-sm text-slate-600">
-            <b>Consejo:</b> arrancá por el <b>Resumen</b> o las <b>Flashcards</b>, y después probá la <b>Trivia</b>, la <b>Línea de tiempo</b> y los arcades para ver cuánto te acordás. Cada partida te da XP para subir de nivel.
+            <b>Consejo:</b> <span dangerouslySetInnerHTML={{ __html: S.tip }} />
           </p>
         </div>
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     8b · ELEGIR MATERIA (pantalla de inicio)
+     ================================================================== */
+  function SubjectPicker({ last, onPick }) {
+    return (
+      <div className="anim-pop">
+        <div className="text-center mt-4 sm:mt-10 mb-6">
+          <img src="icons/icon-192.png" alt="" className="w-20 h-20 mx-auto anim-floaty" />
+          <h1 className="text-3xl sm:text-5xl font-black mt-3 leading-tight bg-gradient-to-br from-indigo-600 via-violet-600 to-pink-500 bg-clip-text text-transparent">
+            ¡Hola, Santi!
+          </h1>
+          <p className="text-slate-500 mt-2 text-lg font-bold">¿Qué querés estudiar hoy?</p>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2 max-w-3xl mx-auto stagger">
+          {Object.values(APP.SUBJECTS).map((S) => {
+            const progress = APP.storeFor(S.id).get();
+            const { total, max } = starsOf(S, progress);
+            const lv = APP.levelFor(progress.xp, S.LEVELS);
+            return (
+              <button key={S.id} data-sfx="open" className="card card-hover p-6 text-left flex flex-col relative"
+                      onClick={() => onPick(S.id)}>
+                {last === S.id && (
+                  <span className="chip absolute top-4 right-4 !text-[11px]">Lo último que estudiaste</span>
+                )}
+                <div className={'w-16 h-16 rounded-3xl grid place-items-center text-white text-3xl mb-4 bg-gradient-to-br ' + S.tint}>
+                  <i className={'fa-solid ' + S.icon} />
+                </div>
+                <h2 className="font-black text-2xl leading-tight">{S.name}</h2>
+                <p className="text-slate-500 font-bold mt-0.5">{S.topic}</p>
+                <div className="flex items-center gap-2 mt-4">
+                  <Stars n={Math.round((total / max) * 3)} size="sm" />
+                  <span className="text-xs font-black text-slate-400">{total}/{max} estrellas</span>
+                </div>
+                <div className="flex items-center justify-between mt-3">
+                  <span className="text-xs font-black text-slate-500">{lv.icon} Nivel {lv.n} · {lv.name}</span>
+                  <span className="text-sm font-black text-indigo-500">Estudiar <i className="fa-solid fa-arrow-right ml-1" /></span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  /** Selector de materia de la barra superior. */
+  function SubjectSwitch({ current, onPick }) {
+    return (
+      <div className="subject-switch" role="tablist" aria-label="Materia">
+        {Object.values(APP.SUBJECTS).map((S) => (
+          <button key={S.id} role="tab" aria-selected={current === S.id}
+                  className={'subject-tab ' + (current === S.id ? 'is-active' : '')}
+                  data-sfx={current === S.id ? 'none' : 'open'}
+                  onClick={() => onPick(S.id)}>
+            <i className={'fa-solid ' + S.icon} />
+            <span>{S.short}</span>
+          </button>
+        ))}
       </div>
     );
   }
@@ -1296,37 +1384,50 @@
      9 · APLICACIÓN
      ================================================================== */
   function App() {
+    const [subjectId, setSubjectId] = useState(null);   // null = pantalla para elegir materia
     const [screen, setScreen] = useState('home');
-    const [progress, setProgress] = useState(() => APP.store.get());
+    const [progress, setProgress] = useState(null);
     const [nonce, setNonce] = useState(0);       // fuerza el reinicio de un juego
-    const [musicMuted, setMusicMuted] = useState(() => APP.store.get().musicMuted);
-    const [sfxMuted, setSfxMuted]     = useState(() => APP.store.get().sfxMuted);
+    const [musicMuted, setMusicMuted] = useState(() => APP.prefs.get().musicMuted);
+    const [sfxMuted, setSfxMuted]     = useState(() => APP.prefs.get().sfxMuted);
     const [soundMenu, setSoundMenu]   = useState(false);
     const [levelUp, setLevelUp] = useState(null);
 
+    const S = subjectId ? APP.SUBJECTS[subjectId] : null;
+    const store = S ? APP.storeFor(S.id) : null;
+
     useEffect(() => { APP.sfx.setMusicMuted(musicMuted); }, [musicMuted]);
     useEffect(() => { APP.sfx.setSfxMuted(sfxMuted); }, [sfxMuted]);
-    useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [screen]);
+    useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [screen, subjectId]);
+
+    /** Cambia de materia (desde la pantalla de inicio o la barra de arriba). */
+    function pickSubject(id) {
+      if (id === subjectId && screen === 'home') return;
+      setSubjectId(id);
+      setProgress(APP.storeFor(id).get());
+      setScreen('home');
+      APP.prefs.set({ subject: id });
+    }
 
     /** Muestra el cartel si el XP nuevo pasa a otro nivel. */
     function checkLevel(before, after) {
-      const a = APP.levelFor(before), b = APP.levelFor(after);
+      const a = APP.levelFor(before, S.LEVELS), b = APP.levelFor(after, S.LEVELS);
       if (b.n > a.n) setLevelUp(b);
     }
 
     function addXp(n) {
-      const cur = APP.store.get();
+      const cur = store.get();
       checkLevel(cur.xp, cur.xp + n);
-      setProgress(APP.store.set({ xp: cur.xp + n }));
+      setProgress(store.set({ xp: cur.xp + n }));
     }
 
     /** Guarda el resultado de una partida y vuelve al menú (o reinicia). */
     function finish(gameId, r) {
       const pct = r.total ? r.correct / r.total : 0;
       const stars = APP.starsFor(pct);
-      const cur = APP.store.get();
+      const cur = store.get();
       const xp = cur.xp + Math.round(r.score / 10);
-      const next = APP.store.set({
+      const next = store.set({
         xp: xp,
         bestStars: Object.assign({}, cur.bestStars, { [gameId]: Math.max(cur.bestStars[gameId] || 0, stars) }),
         bestScore: Object.assign({}, cur.bestScore, { [gameId]: Math.max(cur.bestScore[gameId] || 0, r.score) }),
@@ -1339,43 +1440,51 @@
     }
 
     function resetAll() {
-      if (!window.confirm('¿Borrar todo el progreso guardado (estrellas, XP, nivel y tarjetas aprendidas)?')) return;
-      APP.store.reset();
-      setProgress(APP.store.set({ musicMuted, sfxMuted }));   // el sonido elegido se mantiene
+      if (!window.confirm('¿Borrar todo el progreso de ' + S.name + ' (estrellas, XP, nivel y tarjetas aprendidas)?')) return;
+      setProgress(store.reset());
       setScreen('home');
     }
 
     const back = () => setScreen('home');
-    const lv = APP.levelFor(progress.xp);
+    const lv = S ? APP.levelFor(progress.xp, S.LEVELS) : null;
+    const game = S && S.GAMES.find((g) => g.id === screen);
 
     let content;
-    if (screen === 'home')        content = <Home progress={progress} onPlay={setScreen} />;
-    else if (screen === 'trivia')  content = <Trivia key={nonce} onExit={back} onFinish={(r) => finish('trivia', r)} />;
-    else if (screen === 'tiempo')  content = <TimelineGame key={nonce} onExit={back} onFinish={(r) => finish('tiempo', r)} />;
-    else if (screen === 'unir')    content = <MatchGame key={nonce} onExit={back} onFinish={(r) => finish('unir', r)} />;
-    else if (screen === 'cartas')  content = <Flashcards onExit={back} onXp={addXp} />;
-    else if (screen === 'pueblos') content = <ClassifyGame key={'p' + nonce} kind="pueblos" onExit={back} onFinish={(r) => finish('pueblos', r)} />;
-    else if (screen === 'nomades') content = <ClassifyGame key={'n' + nonce} kind="nomades" onExit={back} onFinish={(r) => finish('nomades', r)} />;
-    else if (screen === 'resumen') content = <Resumen onExit={back} />;
+    if (!S)                          content = <SubjectPicker last={APP.prefs.get().subject} onPick={pickSubject} />;
+    else if (!game)                  content = <Home progress={progress} onPlay={setScreen} />;
+    else if (game.type === 'trivia')   content = <Trivia key={nonce} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'timeline') content = <TimelineGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'match')    content = <MatchGame key={nonce} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'cards')    content = <Flashcards onExit={back} onXp={addXp} />;
+    else if (game.type === 'classify') content = <ClassifyGame key={game.id + nonce} kind={game.id} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'resumen')  content = <Resumen onExit={back} />;
 
     return (
+      <SubjectContext.Provider value={S}>
       <div className="max-w-app mx-auto px-4 pb-16">
-        {/* Barra superior global */}
-        <div className="flex items-center justify-between py-3">
-          <button className="flex items-center gap-2 font-black text-slate-700" data-sfx="back" onClick={back}>
+        {/* Barra superior global. En el celular el selector de materia
+            baja a una segunda fila, a lo ancho. */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-2.5 py-3">
+          <button className="flex items-center gap-2 font-black text-slate-700" data-sfx="back"
+                  onClick={S ? back : undefined}>
             <img src="icons/icon-192.png" alt="" className="w-9 h-9" />
-            <span className="hidden sm:inline">Estudio Santi</span>
+            <span className="hidden md:inline">Estudio Santi</span>
           </button>
-          <div className="flex items-center gap-2">
-            <span className="chip !bg-indigo-50 !text-indigo-600 !border-indigo-200" title={lv.name}>{lv.icon} Nivel {lv.n}</span>
-            <span className="hidden sm:inline"><span className="chip !bg-amber-50 !text-amber-600 !border-amber-200">⚡ {progress.xp} XP</span></span>
+          <div className="order-last w-full sm:order-none sm:w-auto sm:mx-auto">
+            <SubjectSwitch current={subjectId} onPick={pickSubject} />
+          </div>
+          <div className="flex items-center gap-2 ml-auto sm:ml-0">
+            {S && <span className="chip !bg-indigo-50 !text-indigo-600 !border-indigo-200" title={lv.name}>{lv.icon} Nivel {lv.n}</span>}
+            {S && <span className="hidden lg:inline"><span className="chip !bg-amber-50 !text-amber-600 !border-amber-200">⚡ {progress.xp} XP</span></span>}
             <SoundMenu open={soundMenu} setOpen={setSoundMenu}
               musicMuted={musicMuted} sfxMuted={sfxMuted}
-              onMusic={(m) => { setMusicMuted(m); setProgress(APP.store.set({ musicMuted: m })); }}
-              onSfx={(m) => { setSfxMuted(m); setProgress(APP.store.set({ sfxMuted: m })); }} />
-            <button className="btn btn-ghost !px-3 !py-2" title="Borrar progreso" onClick={resetAll}>
-              <i className="fa-solid fa-trash-can" />
-            </button>
+              onMusic={(m) => { setMusicMuted(m); APP.prefs.set({ musicMuted: m }); }}
+              onSfx={(m) => { setSfxMuted(m); APP.prefs.set({ sfxMuted: m }); }} />
+            {S && (
+              <button className="btn btn-ghost !px-3 !py-2" title={'Borrar progreso de ' + S.name} onClick={resetAll}>
+                <i className="fa-solid fa-trash-can" />
+              </button>
+            )}
           </div>
         </div>
 
@@ -1384,9 +1493,10 @@
         {levelUp && <LevelUp lv={levelUp} onClose={() => setLevelUp(null)} />}
 
         <footer className="text-center text-[11px] text-slate-400 mt-10">
-          Hecho para estudiar 💜 · Contenido: Ciencias Sociales — “Pueblos originarios de Santa Fe”
+          Hecho para estudiar 💜{S && <> · Contenido: {S.source}</>}
         </footer>
       </div>
+      </SubjectContext.Provider>
     );
   }
 

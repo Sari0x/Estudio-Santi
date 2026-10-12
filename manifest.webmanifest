@@ -1,7 +1,7 @@
 {
-  "name": "Estudio Santi · Pueblos originarios de Santa Fe",
+  "name": "Estudio Santi",
   "short_name": "Estudio Santi",
-  "description": "Juegos para estudiar los pueblos originarios de Santa Fe.",
+  "description": "Juegos para estudiar Ciencias Sociales y Lengua.",
   "lang": "es-AR",
   "start_url": "./",
   "scope": "./",

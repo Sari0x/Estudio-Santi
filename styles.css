@@ -348,3 +348,21 @@ body {
 }
 .switch.on { background: var(--c-primary); }
 .switch.on > i { transform: translateX(1.1rem); }
+
+/* --------------------- 12. SELECTOR DE MATERIA ---------------------- */
+.subject-switch {
+  display: flex; gap: .25rem; padding: .25rem;
+  background: #fff; border: 2px solid #e7e6f7; border-radius: 999px;
+}
+.subject-tab {
+  flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: .45rem;
+  padding: .45rem 1rem; border-radius: 999px;
+  font-weight: 800; font-size: .85rem; color: var(--c-ink-soft); white-space: nowrap;
+  transition: background .2s ease, color .2s ease, box-shadow .2s ease;
+}
+.subject-tab:hover { background: var(--c-surface-2); color: var(--c-primary-d); }
+.subject-tab.is-active {
+  background: linear-gradient(135deg, var(--c-primary), var(--c-primary-d)); color: #fff;
+  box-shadow: var(--shadow-sm);
+}
+.subject-tab:focus-visible { outline: 3px solid #a5b4fc; outline-offset: 2px; }
