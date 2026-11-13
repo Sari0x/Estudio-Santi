@@ -121,6 +121,11 @@ window.APP = (function () {
         if (h) { try { h.play(name); } catch (e) { /* audio no disponible */ } }
       },
       setSfxMuted(v) { sfxMuted = !!v; },
+      /** Baja la música mientras habla la voz en inglés o suena un audio
+          del Listening (on = true), y la vuelve a subir después. */
+      duck(on) {
+        if (music) { try { music.volume(on ? MUSIC_VOL * 0.15 : MUSIC_VOL); } catch (e) { /* sin audio */ } }
+      },
       setMusicMuted(v) {
         musicMuted = !!v;
         if (musicMuted) stopMusic(); else startMusic();

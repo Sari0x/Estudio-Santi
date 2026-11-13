@@ -1,6 +1,6 @@
 # Estudio Santi — juegos de estudio
 
-App web de una sola página para repasar dos materias:
+App web de una sola página para repasar tres materias:
 
 - **Ciencias Sociales** · "Pueblos originarios de Santa Fe" y "Recursos naturales". El contenido
   sale del resumen `pueblos_originarios_de_santa_fe.md` y de la fotocopia
@@ -10,6 +10,8 @@ App web de una sola página para repasar dos materias:
   adjetivos. El contenido sale de `apuntes_de_lengua.md`; para que los juegos
   tengan material se sumaron algunos ejemplos más de los mismos conceptos
   (otros verbos conjugados, sustantivos abstractos/concretos y adjetivos).
+- **Inglés** · examen final de Learning Lands 2, con foco en el Speaking
+  (question words, "Tell me about…", prepositions). Ver la sección *Inglés* más abajo.
 
 Al abrir la app se elige la materia. Desde la barra de arriba se puede pasar
 de una a otra en cualquier momento. Cada materia guarda su propio progreso
@@ -69,6 +71,33 @@ línea a `D_SUSTANTIVOS`, `D_VERBOS` o `D_ADJETIVOS`.
 En las dos materias hay un **Resumen para leer** con la ficha de datos, el texto por secciones
 y el cuadro de los tres pueblos.
 
+## Inglés (examen final · Learning Lands 2)
+
+El contenido sale de los consejos de la seño para el Speaking (question words,
+"Tell me about…" y prepositions), los 3 cuestionarios de Wordwall de la
+plataforma (copiados tal cual), la ficha de Speaking de la carpeta (Part 1 a 4,
+he/she/it + S) y el PDF *Learning Lands 2 – End of Year Test – Reach Higher*.
+Todo está en `ingles.js`.
+
+| Juego | Qué practica |
+|---|---|
+| ❓ **Question words** | Cuestionario estilo Wordwall (pantalla con INICIAR, botones de colores A-B-C-D, aciertos arriba y "X de N" abajo). Se elige el Juego 1, 2 o 3 de la plataforma o una mezcla. |
+| 🎤 **Simulacro de Speaking** | La "teacher" pregunta **en voz alta** (Introduction, Part 1, 2, 3 y 4). Santi contesta hablando, mira la respuesta modelo y marca si la dijo bien. Al final lista lo que hay que practicar. |
+| 💬 **Tell me about…** | Arma 4 oraciones (animal, estación, docente, amigo, país, juguete) eligiendo la palabra correcta, escucha el texto y lo dice solito (con opción de esconderlo). |
+| 📍 **Prepositions** | Dibujos con emojis: Where is the cat? It's under the chair. Where is Jack? He's between Lucy and Mary. |
+| 🖼️ **Look and answer** | Part 2: What is this? / What are these? / Big or small? / What colour? |
+| 🔗 **Pregunta y respuesta** | Unir con flechas preguntas ↔ respuestas y question words ↔ castellano. |
+| 🔤 **Write the question** | Writing del examen: tocar las palabras en orden (have / you / got / a / helmet → Have you got a helmet?). |
+| 🎧 **Listening** | Los dos audios del examen (`audio/listening-1.mp3` y `-2.mp3`) con sus preguntas. |
+| 📖 **Reading** | True / False con imágenes y el texto "The beach" para completar. |
+| ⚡ Arcades | **¿Con S o sin S?**, **has got · have got** y **It's… o They're…?** |
+
+La voz usa la del navegador (`speechSynthesis`, en inglés) y la música baja
+sola mientras habla. Donde el navegador lo permite (Chrome), hay un botón de
+**micrófono** que escucha la respuesta y avisa si fue una oración completa.
+Las respuestas modelo usan los datos de la ficha (Santiago, 9 años, cumple en
+abril, Argentina, teacher Camila…): se cambian en `PERSONAL` dentro de `ingles.js`.
+
 ## Estrellas, XP y niveles
 
 - Cada juego con puntaje da **hasta 3 estrellas** según el porcentaje de aciertos
@@ -102,6 +131,7 @@ index.html   Estructura + componentes de React (JSX inline, así funciona con fi
 styles.css   Tema visual, animaciones, tarjeta con volteo 3D, línea de tiempo, drag & drop
 app.js       Utilidades + datos de Ciencias Sociales (trivia, línea de tiempo, pares, flashcards, baldes)
 lengua.js    Datos de Lengua, con la misma forma
+ingles.js    Datos de Inglés + la voz (APP.say) y el micrófono (APP.listen)
 audio/       musica.mp3 (20 min recortados del original, 96 kbps) y efectos.mp3 (todos los efectos)
 icons/       Íconos de la app hechos con estudio.png (normales y "maskable" para Android)
 manifest.webmanifest, sw.js   Lo que hace falta para instalarla en el celular

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0" />
-  <meta name="description" content="Juegos para estudiar Ciencias Sociales (pueblos originarios de Santa Fe y recursos naturales) y Lengua" />
+  <meta name="description" content="Juegos para estudiar Ciencias Sociales (pueblos originarios de Santa Fe y recursos naturales), Lengua e Inglés" />
   <meta name="theme-color" content="#6366f1" />
   <title>Estudio Santi · Juegos de estudio</title>
 
@@ -53,9 +53,10 @@
   <!-- Howler.js: música de fondo y efectos de sonido -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 
-  <!-- Utilidades + materias (Sociales en app.js, Lengua en lengua.js) -->
+  <!-- Utilidades + materias (Sociales en app.js, Lengua en lengua.js, Inglés en ingles.js) -->
   <script src="app.js"></script>
   <script src="lengua.js"></script>
+  <script src="ingles.js"></script>
 
   <!-- ==================================================================
        APLICACIÓN (React). Está inline a propósito: así el archivo funciona
@@ -841,12 +842,14 @@
             <div className="flip-face flip-front">
               <Chip icon="fa-layer-group">{card.deck}</Chip>
               <p className="text-xl sm:text-3xl font-black mt-4 leading-snug">{card.f}</p>
+              {S.speak && <div className="mt-4"><SayBtn text={card.say || card.f} /></div>}
               <p className="text-xs text-slate-400 mt-6"><i className="fa-solid fa-hand-pointer mr-1" />Tocá la tarjeta para ver la respuesta</p>
               {isKnown && <span className="absolute top-4 right-4 text-emerald-500 text-xl"><i className="fa-solid fa-circle-check" /></span>}
             </div>
             <div className="flip-face flip-back">
               <i className="fa-solid fa-lightbulb text-3xl text-amber-300 mb-3" />
               <p className="text-base sm:text-xl font-bold leading-relaxed">{card.b}</p>
+              {S.speak && card.bEn && <div className="mt-4"><SayBtn text={card.b} /></div>}
               <p className="text-xs text-white/60 mt-6">Tocá para volver</p>
             </div>
           </div>
@@ -1207,6 +1210,835 @@
               <button className="btn btn-primary mt-4 w-full sm:w-auto" onClick={next}>
                 {lastStep && lastCase ? 'Ver resultado' : lastStep ? 'Siguiente palabra' : 'Siguiente pista'} <i className="fa-solid fa-arrow-right" />
               </button>
+            </Explain>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     6c · INGLÉS · PIEZAS CON VOZ
+     ================================================================== */
+
+  /** Botón de parlante: lee el texto en inglés. No aparece si el
+      navegador no tiene voz. */
+  function SayBtn({ text, slow, className, label }) {
+    if (!APP.canSpeak || !text) return null;
+    return (
+      <button type="button" data-sfx="none" className={'say-btn ' + (className || '')}
+              title={slow ? 'Escuchar más lento' : 'Escuchar'} aria-label={label || 'Escuchar'}
+              onClick={(e) => { e.stopPropagation(); APP.say(text, { slow: slow }); }}>
+        <i className={'fa-solid ' + (slow ? 'fa-person-walking' : 'fa-volume-high')} />
+      </button>
+    );
+  }
+
+  /** Dibujo con emojis para las preposiciones (y la fila de chicos). */
+  function Scene({ scene }) {
+    if (scene.kind === 'kids') {
+      return (
+        <div className="kids-row py-2">
+          {scene.kids.map((k) => (
+            <div key={k.n} className="kid">
+              <span className="text-5xl leading-none">{k.e}</span>
+              <span className="kid-name">{k.n}</span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    const P = '5.6rem';
+    const base = { left: '50%', bottom: '10%', fontSize: P };
+    const place = (extra) => <span className="sc" style={Object.assign({}, base, extra)}>{scene.place}</span>;
+    const thing = (st) => <span className="sc" style={st}>{scene.thing}</span>;
+    let body;
+    switch (scene.rel) {
+      case 'on':
+        body = <>{place({ zIndex: 1 })}{thing({ left: '50%', bottom: 'calc(10% + 4.9rem)', fontSize: '3rem', zIndex: 2 })}</>;
+        break;
+      case 'under':
+        body = <>{place({ bottom: '34%', zIndex: 2 })}{thing({ left: '50%', bottom: '6%', fontSize: '2.6rem', zIndex: 1 })}</>;
+        break;
+      case 'next to':
+        body = <>{place({ left: '36%', zIndex: 1 })}{thing({ left: '74%', bottom: '10%', fontSize: '3.2rem', zIndex: 2 })}</>;
+        break;
+      case 'behind':
+        body = <>{thing({ left: '58%', bottom: 'calc(10% + 2.6rem)', fontSize: '3rem', zIndex: 1, filter: 'brightness(.85)' })}{place({ zIndex: 2 })}</>;
+        break;
+      case 'in front of':
+        body = <>{place({ bottom: '22%', fontSize: '5rem', zIndex: 1 })}{thing({ left: '50%', bottom: '3%', fontSize: '3.6rem', zIndex: 2 })}</>;
+        break;
+      default:   // 'in': el recipiente dos veces, el de adelante recortado
+        body = <>{place({ zIndex: 1 })}
+                 {thing({ left: '50%', bottom: 'calc(10% + 2.3rem)', fontSize: '2.6rem', zIndex: 2 })}
+                 {place({ zIndex: 3, clipPath: 'inset(48% 0 0 0)' })}</>;
+    }
+    return <div className="scene" aria-hidden="true">{body}</div>;
+  }
+
+  /** Chicos con nombre y lo que están haciendo (Part 3 del Speaking). */
+  function PeopleScene({ people }) {
+    return (
+      <div className="kids-row">
+        {people.map((p) => (
+          <div key={p.n} className="kid">
+            <span className="text-4xl leading-none">{p.e}<span className="text-2xl ml-0.5">{p.d}</span></span>
+            <span className="kid-name">{p.n}</span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  /** Texto con [[partes resaltadas]]. */
+  function Marked({ text }) {
+    return text.split(/\[\[(.*?)\]\]/).map((part, k) =>
+      k % 2 ? <mark key={k} className="px-1.5 py-0.5 rounded-lg bg-amber-200 text-amber-900 font-black">{part}</mark> : part);
+  }
+
+  /** La oración completa (para leerla en voz alta después de contestar). */
+  function fullSentence(q) {
+    if (q.say) return q.say;
+    if (q.q.indexOf('___') !== -1) return q.q.replace('___', q.ok);
+    return q.q + ' ' + q.ok;
+  }
+
+  /* ==================================================================
+     6d · INGLÉS · CUESTIONARIO (estilo Wordwall)
+     Pantalla de inicio con "Cuestionario", título e INICIAR; durante el
+     juego, la pregunta grande, las respuestas en botones de colores con
+     letra, el contador de aciertos arriba y "X de N" abajo.
+     ================================================================== */
+  function QuizGame({ kind, onFinish, onExit }) {
+    const S = useSubject();
+    const cfg = S.QUIZ[kind];
+    const [set, setSet]   = useState(cfg.sets[0]);
+    const [qs, setQs]     = useState(null);        // null = pantalla de inicio
+    const [i, setI]       = useState(0);
+    const [chosen, setChosen] = useState(null);
+    const [correct, setCorrect] = useState(0);
+    const [score, setScore] = useState(0);
+    const [streak, setStreak] = useState(0);
+    const [done, setDone] = useState(false);
+    const timer = useRef(null);
+    useEffect(() => () => clearTimeout(timer.current), []);
+
+    function start() { setQs(set.build()); setI(0); setChosen(null); }
+
+    if (!qs) {
+      return (
+        <div>
+          <GameHeader title={cfg.title} subtitle="Cuestionario" onExit={onExit} />
+          <div className="card p-6 sm:p-9 text-center anim-pop max-w-xl mx-auto">
+            <p className="text-xs font-black uppercase tracking-widest text-rose-400">Cuestionario</p>
+            <h3 className="text-3xl sm:text-4xl font-black mt-1">{set.name}</h3>
+            <p className="text-slate-500 mt-3">{cfg.intro}</p>
+            {cfg.sets.length > 1 && (
+              <div className="grid gap-2 mt-5 text-left">
+                {cfg.sets.map((s) => (
+                  <button key={s.id} className={'option ' + (s.id === set.id ? '!border-indigo-400 !bg-indigo-50' : '')}
+                          onClick={() => setSet(s)}>
+                    <span className="badge">{s.id === set.id ? <i className="fa-solid fa-check" /> : <i className="fa-solid fa-gamepad" />}</span>
+                    <span className="flex-1">
+                      <span className="block font-black">{s.name}</span>
+                      <span className="block text-xs text-slate-500 font-bold">{s.desc}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button className="ww-start mt-7" data-sfx="open" onClick={start}>INICIAR</button>
+          </div>
+        </div>
+      );
+    }
+
+    const TOTAL = qs.length;
+    const q = qs[i];
+    const answered = chosen !== null;
+    const ok = chosen === q.ok;
+
+    function next() {
+      clearTimeout(timer.current);
+      if (i + 1 >= TOTAL) { setDone(true); return; }
+      setI(i + 1); setChosen(null);
+    }
+
+    function answer(opt, ev) {
+      if (answered) return;
+      setChosen(opt);
+      APP.say(fullSentence(q));
+      if (opt === q.ok) {
+        const pts = 100 + Math.min(streak * 20, 100);
+        setScore((s) => s + pts);
+        setCorrect((c) => c + 1);
+        setStreak((s) => s + 1);
+        fx.good({ x: ev.clientX, y: ev.clientY }, pts);
+        timer.current = setTimeout(next, 1800);   // como Wordwall: sigue solo
+      } else {
+        setStreak(0);
+        fx.bad();
+      }
+    }
+
+    if (done) {
+      return <ResultScreen title={cfg.title + ' · ' + set.name} score={score} correct={correct} total={TOTAL}
+        onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
+        onExit={() => onFinish({ score, correct, total: TOTAL })} />;
+    }
+
+    const parts = q.q.split('___');
+    const short = q.opts.every((o) => o.length <= 14);
+
+    return (
+      <div className="no-touch-zoom">
+        <GameHeader title={cfg.title} subtitle={set.name} onExit={onExit} progress={{ v: i, m: TOTAL }}
+          right={<div className="text-right">
+            <p className="font-black text-emerald-600 leading-none"><i className="fa-solid fa-check mr-1" />{correct}</p>
+            <p className="text-[10px] uppercase font-bold text-slate-400">aciertos</p>
+          </div>} />
+
+        <div className="card p-5 sm:p-7 anim-fadeup" key={i}>
+          {q.pic && <div className="text-7xl sm:text-8xl text-center mb-4 leading-none anim-pop">{q.pic}</div>}
+          {q.scene && <div className="mb-4"><Scene scene={q.scene} /></div>}
+          {q.text && (
+            <p className="rounded-2xl bg-indigo-50/70 border border-indigo-100 px-4 py-3 mb-4 text-base sm:text-lg font-semibold text-slate-700 leading-relaxed">
+              <Marked text={q.text} />
+            </p>
+          )}
+
+          <div className="flex items-start gap-3 mb-5">
+            <h3 className="flex-1 text-xl sm:text-3xl font-black leading-snug">
+              {parts.length > 1
+                ? <>{parts[0]}<span className={'ww-blank ' + (answered ? 'is-filled' : '')}>{answered ? q.ok : ' '}</span>{parts[1]}</>
+                : q.q}
+            </h3>
+            <SayBtn text={answered ? fullSentence(q) : q.say || q.q} />
+          </div>
+
+          <div className={'grid gap-3 ' + (short ? 'grid-cols-2' : '')}>
+            {q.opts.map((o, k) => {
+              let cls = 'ww-opt ww-' + (k % 4);
+              if (answered) cls += o === q.ok ? ' is-ok' : o === chosen ? ' is-bad' : ' is-dim';
+              return (
+                <button key={o} data-sfx="none" className={cls} disabled={answered} onClick={(e) => answer(o, e)}>
+                  <span className="ww-letter">{'ABCD'[k]}</span>
+                  <span className="flex-1">{o}</span>
+                  {answered && o === q.ok && <i className="fa-solid fa-circle-check" />}
+                  {answered && o === chosen && o !== q.ok && <i className="fa-solid fa-circle-xmark" />}
+                </button>
+              );
+            })}
+          </div>
+
+          {answered && (
+            <Explain ok={ok} why={q.why}>
+              <button className="btn btn-primary mt-4 w-full sm:w-auto" onClick={next}>
+                {i + 1 >= TOTAL ? 'Ver resultado' : 'Siguiente'} <i className="fa-solid fa-arrow-right" />
+              </button>
+            </Explain>
+          )}
+
+          <p className="text-center text-sm font-black text-slate-400 mt-5">{i + 1} de {TOTAL}</p>
+        </div>
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     6e · INGLÉS · MICRÓFONO
+     Escucha lo que dice Santi y lo muestra. Si contestó con una o dos
+     palabras, le recuerda que diga una oración completa.
+     ================================================================== */
+  function MicBox({ resetKey }) {
+    const [state, setState] = useState('idle');   // idle | on | done | error
+    const [heard, setHeard] = useState('');
+    const stopRef = useRef(null);
+    useEffect(() => { setState('idle'); setHeard(''); return () => stopRef.current && stopRef.current(); }, [resetKey]);
+    if (!APP.canListen) return null;
+
+    function toggle() {
+      if (state === 'on') { stopRef.current && stopRef.current(); return; }
+      setHeard(''); setState('on');
+      stopRef.current = APP.listen(
+        (txt) => setHeard(txt),
+        (why) => setState(why === 'ok' ? 'done' : why === 'no-speech' ? 'done' : 'error')
+      );
+    }
+    const words = heard ? heard.split(/\s+/).filter(Boolean).length : 0;
+
+    return (
+      <div className="mt-4">
+        <button className={'btn w-full ' + (state === 'on' ? 'bg-rose-500 text-white mic-on' : 'btn-ghost')}
+                data-sfx="none" onClick={toggle}>
+          <i className={'fa-solid ' + (state === 'on' ? 'fa-stop' : 'fa-microphone')} />
+          {state === 'on' ? 'Te estoy escuchando… (tocá para terminar)' : 'Contestá hablando (micrófono)'}
+        </button>
+        {(heard || state === 'done' || state === 'error') && (
+          <div className="rounded-2xl bg-slate-50 border border-slate-200 p-3 mt-2 text-sm anim-fadeup">
+            {state === 'error'
+              ? <p className="text-slate-500">No pude usar el micrófono. Contestá en voz alta igual y seguí. 🙂</p>
+              : heard
+                ? <>
+                    <p className="text-slate-400 text-xs font-black uppercase tracking-wide">Escuché:</p>
+                    <p className="font-bold text-slate-700 text-base">“{heard}”</p>
+                    {state === 'done' && (words >= 3
+                      ? <p className="text-emerald-600 font-black mt-1">¡Muy bien, dijiste una oración completa! 👏</p>
+                      : <p className="text-amber-600 font-black mt-1">💡 Probá con una oración completa, no sólo una palabra.</p>)}
+                  </>
+                : <p className="text-slate-500">No escuché nada. Tocá el micrófono y hablá más fuerte. 🙂</p>}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     6f · INGLÉS · SIMULACRO DE SPEAKING
+     La teacher pregunta (con voz), Santi contesta en voz alta, mira la
+     respuesta modelo y marca si lo dijo bien. Introduction → Part 1 →
+     Part 2 → Part 3 → Part 4.
+     ================================================================== */
+  function SpeakingGame({ title, onFinish, onExit }) {
+    const S = useSubject();
+    const [steps] = useState(() => S.SPEAKING.build());
+    const [started, setStarted] = useState(false);
+    const [i, setI] = useState(0);
+    const [shown, setShown] = useState(false);
+    const [marks, setMarks] = useState([]);     // true = lo dijo bien
+    const [done, setDone] = useState(false);
+    const TOTAL = steps.length;
+    const st = steps[i];
+
+    useEffect(() => {
+      if (!started || done) return;
+      const id = setTimeout(() => APP.say(st.q), 350);
+      return () => clearTimeout(id);
+    }, [i, started, done]);
+
+    function mark(ok, ev) {
+      if (ok) fx.good({ x: ev.clientX, y: ev.clientY }, 100); else APP.sfx.play('flip');
+      const next = marks.concat(ok);
+      setMarks(next);
+      if (i + 1 >= TOTAL) { setDone(true); return; }
+      setI(i + 1); setShown(false);
+    }
+
+    const correct = marks.filter(Boolean).length;
+    const score = correct * 100;
+
+    if (done) {
+      const practice = steps.filter((x, k) => !marks[k]);
+      return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
+        extra={practice.length > 0 && (
+          <div className="text-left rounded-2xl bg-amber-50 border border-amber-200 p-4">
+            <p className="font-black text-amber-700 mb-2"><i className="fa-solid fa-repeat mr-1" /> Para practicar otra vez:</p>
+            <ul className="space-y-2 text-sm">
+              {practice.map((x) => (
+                <li key={x.q} className="flex items-start gap-2">
+                  <SayBtn text={x.q + ' ' + x.a} className="!w-8 !h-8 !text-xs" />
+                  <span><b>{x.q}</b><br /><span className="text-slate-600">{x.a}</span></span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+        onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
+        onExit={() => onFinish({ score, correct, total: TOTAL })} />;
+    }
+
+    if (!started) {
+      return (
+        <div>
+          <GameHeader title={title} subtitle="Como el examen oral" onExit={onExit} />
+          <div className="card p-6 sm:p-8 anim-pop max-w-xl mx-auto">
+            <div className="text-6xl text-center anim-floaty">👩‍🏫</div>
+            <h3 className="text-2xl font-black text-center mt-3">¡Hora del Speaking!</h3>
+            <ol className="mt-4 space-y-2.5 text-slate-600">
+              <li className="flex gap-2"><span className="chip !px-2">1</span><span>La teacher te hace una pregunta <b>en voz alta</b> (subí el volumen 🔊).</span></li>
+              <li className="flex gap-2"><span className="chip !px-2">2</span><span>Contestá <b>hablando</b>, con una <b>oración completa</b>. ¡Nunca sólo “yes” o “no”!</span></li>
+              <li className="flex gap-2"><span className="chip !px-2">3</span><span>Tocá <b>Ver respuesta</b> y fijate si lo dijiste bien. ¡Sé sincero! 😉</span></li>
+            </ol>
+            <p className="text-xs text-slate-400 mt-4">
+              Son {TOTAL} preguntas: Introduction, Part 1 (preguntas personales), Part 2 (una foto), Part 3 (un dibujo) y Part 4 (Tell me about…).
+              {APP.canListen && ' Si querés, tocá el micrófono para que la app escuche lo que decís.'}
+              {!APP.canSpeak && ' Este navegador no tiene voz: leé la pregunta en voz alta vos.'}
+            </p>
+            <button className="btn btn-primary w-full mt-5 !py-3.5 !text-lg" onClick={() => setStarted(true)}>
+              <i className="fa-solid fa-play" /> Empezar
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="no-touch-zoom">
+        <GameHeader title={title} subtitle={st.part} onExit={onExit} progress={{ v: i, m: TOTAL }}
+          right={<div className="text-right">
+            <p className="font-black text-indigo-600 leading-none">{correct}</p>
+            <p className="text-[10px] uppercase font-bold text-slate-400">bien dichas</p>
+          </div>} />
+
+        <div className="card p-5 sm:p-7 anim-fadeup" key={i}>
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <Chip icon="fa-comments">{st.part}</Chip>
+            <span className="text-xs font-black text-slate-400">{i + 1} de {TOTAL}</span>
+          </div>
+
+          {st.pic && <div className="text-7xl sm:text-8xl text-center mb-4 leading-none anim-pop">{st.pic}</div>}
+          {st.people && <div className="mb-4"><PeopleScene people={st.people} /></div>}
+
+          <div className="flex items-start gap-3">
+            <span className="text-4xl leading-none mt-1">👩‍🏫</span>
+            <div className="bubble flex-1 ml-1">
+              <p className="text-lg sm:text-2xl font-black leading-snug">{st.q}</p>
+              <div className="flex gap-2 mt-2">
+                <SayBtn text={st.q} label="Repetir la pregunta" />
+                <SayBtn text={st.q} slow label="Repetir más lento" />
+              </div>
+            </div>
+          </div>
+
+          <MicBox resetKey={i} />
+
+          {!shown ? (
+            <button className="btn btn-accent w-full mt-4" onClick={() => setShown(true)}>
+              <i className="fa-solid fa-eye" /> Ver respuesta
+            </button>
+          ) : (
+            <div className="rounded-2xl p-4 mt-4 anim-fadeup border-2 bg-emerald-50 border-emerald-200">
+              <p className="text-[11px] font-black uppercase tracking-wide text-emerald-600">Una buena respuesta</p>
+              <div className="flex items-start gap-3 mt-1">
+                <p className={'flex-1 font-black text-slate-800 ' + (st.long ? 'text-base sm:text-lg leading-relaxed' : 'text-lg sm:text-2xl')}>{st.a}</p>
+                <SayBtn text={st.a} />
+              </div>
+              {st.tip && <p className="text-sm text-slate-500 mt-2"><i className="fa-solid fa-lightbulb text-amber-400 mr-1" />{st.tip}</p>}
+              <p className="font-black text-slate-600 mt-4">¿Lo dijiste bien?</p>
+              <div className="grid grid-cols-2 gap-2.5 mt-2">
+                <button className="btn btn-primary" data-sfx="none" onClick={(e) => mark(true, e)}>
+                  <i className="fa-solid fa-check" /> ¡Sí!
+                </button>
+                <button className="btn btn-ghost" data-sfx="none" onClick={(e) => mark(false, e)}>
+                  <i className="fa-solid fa-repeat" /> A practicar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     6g · INGLÉS · TELL ME ABOUT…
+     Por cada tema se arman 4 oraciones eligiendo la palabra correcta.
+     Al final se escucha el texto entero y Santi lo dice solito.
+     ================================================================== */
+  function TellMeGame({ title, onFinish, onExit }) {
+    const S = useSubject();
+    const [topics] = useState(() => APP.pick(S.TELLME, 3).map((t) => ({
+      ...t, steps: t.steps.map((st) => ({ ...st, opts: APP.shuffle(st.opts) }))
+    })));
+    const TOTAL = topics.reduce((a, t) => a + t.steps.length, 0);
+    const [ti, setTi] = useState(0);
+    const [si, setSi] = useState(0);
+    const [chosen, setChosen] = useState(null);
+    const [correct, setCorrect] = useState(0);
+    const [score, setScore] = useState(0);
+    const [hide, setHide] = useState(false);
+    const [done, setDone] = useState(false);
+
+    const t = topics[ti];
+    const finished = si >= t.steps.length;       // terminó de armar este tema
+    const st = t.steps[si];
+    const answered = chosen !== null;
+    const fill = (x) => x.s.replace('___', x.ok);
+
+    useEffect(() => { if (finished) { APP.confetti(90); APP.say(t.text); } }, [finished, ti]);
+
+    function answer(o, ev) {
+      if (answered) return;
+      setChosen(o);
+      if (o === st.ok) {
+        setCorrect((c) => c + 1); setScore((s) => s + 100);
+        fx.good({ x: ev.clientX, y: ev.clientY }, 100);
+      } else fx.bad();
+    }
+    function next() { setChosen(null); setSi(si + 1); }
+    function nextTopic() {
+      if (ti + 1 >= topics.length) { setDone(true); return; }
+      setTi(ti + 1); setSi(0); setHide(false);
+    }
+
+    if (done) {
+      return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
+        extra={<p className="text-sm text-slate-500">Armaste <b className="text-fuchsia-600">{topics.length}</b> textos de “Tell me about…” 🗣️</p>}
+        onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
+        onExit={() => onFinish({ score, correct, total: TOTAL })} />;
+    }
+
+    const doneSoFar = topics.slice(0, ti).reduce((a, x) => a + x.steps.length, 0) + Math.min(si, t.steps.length);
+
+    return (
+      <div className="no-touch-zoom">
+        <GameHeader title={title} subtitle={'Tema ' + (ti + 1) + ' de ' + topics.length} onExit={onExit}
+          progress={{ v: doneSoFar, m: TOTAL }}
+          right={<div className="text-right">
+            <p className="font-black text-fuchsia-600 leading-none">{score}</p>
+            <p className="text-[10px] uppercase font-bold text-slate-400">puntos</p>
+          </div>} />
+
+        <div className="card p-5 sm:p-7 anim-fadeup" key={ti}>
+          <div className="flex items-center gap-3">
+            <span className="text-5xl leading-none">{t.pic}</span>
+            <div className="flex-1">
+              <p className="text-[11px] font-black uppercase tracking-widest text-fuchsia-400">Part 4 · 3 o 4 oraciones</p>
+              <h3 className="text-xl sm:text-2xl font-black leading-tight">Tell me about {t.title}.</h3>
+            </div>
+            <SayBtn text={'Tell me about ' + t.title + '.'} />
+          </div>
+
+          {/* Lo que ya armó */}
+          {si > 0 && !hide && (
+            <div className="rounded-2xl bg-fuchsia-50/70 border border-fuchsia-100 p-4 mt-4 space-y-1">
+              {t.steps.slice(0, si).map((x, k) => (
+                <p key={k} className="font-bold text-slate-700 anim-fadeup"><span className="text-fuchsia-400 font-black mr-1">{k + 1}.</span>{fill(x)}</p>
+              ))}
+            </div>
+          )}
+
+          {!finished ? (
+            <>
+              <p className="text-sm font-bold text-slate-500 mt-5">Oración {si + 1} de {t.steps.length}: elegí la palabra que va.</p>
+              <h4 className="text-xl sm:text-2xl font-black leading-snug mt-1 mb-4">
+                {st.s.split('___')[0]}
+                <span className={'ww-blank ' + (answered ? 'is-filled' : '')}>{answered ? st.ok : ' '}</span>
+                {st.s.split('___')[1]}
+              </h4>
+              <div className="grid grid-cols-3 gap-2.5">
+                {st.opts.map((o, k) => {
+                  let cls = 'ww-opt justify-center ww-' + k;
+                  if (answered) cls += o === st.ok ? ' is-ok' : o === chosen ? ' is-bad' : ' is-dim';
+                  return <button key={o} data-sfx="none" className={cls} disabled={answered} onClick={(e) => answer(o, e)}>{o}</button>;
+                })}
+              </div>
+              {answered && (
+                <Explain ok={chosen === st.ok} why={st.why}>
+                  <button className="btn btn-primary mt-4 w-full sm:w-auto" onClick={next}>
+                    {si + 1 >= t.steps.length ? 'Ver el texto completo' : 'Siguiente oración'} <i className="fa-solid fa-arrow-right" />
+                  </button>
+                </Explain>
+              )}
+            </>
+          ) : (
+            <div className="mt-5 anim-pop">
+              <div className="rounded-2xl bg-emerald-50 border-2 border-emerald-200 p-4">
+                <div className="flex items-start gap-3">
+                  <p className="flex-1 text-lg sm:text-xl font-black text-slate-800 leading-relaxed">
+                    {hide ? <span className="text-slate-400">🙈 Texto escondido… ¡decilo de memoria!</span> : t.text}
+                  </p>
+                  <SayBtn text={t.text} />
+                </div>
+              </div>
+              <p className="text-sm text-slate-600 mt-4">
+                <b>Ahora vos:</b> decilo en voz alta, como en el examen. Primero mirando y después
+                tocá <b>Esconder</b> para decirlo de memoria. ¡Podés cambiar las palabras por las tuyas!
+              </p>
+              <button className="btn btn-ghost w-full mt-3" onClick={() => setHide(!hide)}>
+                <i className={'fa-solid ' + (hide ? 'fa-eye' : 'fa-eye-slash')} /> {hide ? 'Mostrar el texto' : 'Esconder el texto'}
+              </button>
+              <MicBox resetKey={ti} />
+              <button className="btn btn-primary w-full mt-4" onClick={nextTopic}>
+                {ti + 1 >= topics.length ? 'Ver resultado' : 'Siguiente tema'} <i className="fa-solid fa-arrow-right" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     6h · INGLÉS · WRITE THE QUESTION (ordenar palabras)
+     Las palabras aparecen mezcladas y hay que tocarlas en orden. Si se
+     toca una equivocada, se sacude y esa pregunta ya no cuenta como
+     perfecta (pero se puede terminar igual).
+     ================================================================== */
+  function OrderGame({ title, onFinish, onExit }) {
+    const S = useSubject();
+    const [items] = useState(() => APP.pick(S.ORDER, 8));
+    const TOTAL = items.length;
+    const [i, setI] = useState(0);
+    const [placed, setPlaced] = useState(0);
+    const [pool, setPool] = useState(() => APP.shuffle(items[0].w.map((_, k) => k)));
+    const [missed, setMissed] = useState(false);
+    const [wrong, setWrong] = useState(null);
+    const [correct, setCorrect] = useState(0);
+    const [score, setScore] = useState(0);
+    const [done, setDone] = useState(false);
+
+    const it = items[i];
+    const complete = placed === it.w.length;
+    const sentence = it.w.join(' ').replace(/ \?/, '?');
+    const shown = (w, k) => (k === 0 && w !== 'I' ? w.charAt(0).toLowerCase() + w.slice(1) : w);
+
+    useEffect(() => {
+      if (!complete) return;
+      if (!missed) setCorrect((c) => c + 1);
+      setScore((s) => s + (missed ? 30 : 100));
+      APP.confetti(70); APP.sfx.play('win');
+      APP.say(sentence + ' ' + it.reply);
+    }, [complete]);
+
+    function tap(k, ev) {
+      if (complete) return;
+      if (it.w[k].toLowerCase() === it.w[placed].toLowerCase()) {
+        APP.sfx.play('pick');
+        setPool((p) => p.filter((x) => x !== k));
+        setPlaced(placed + 1);
+      } else {
+        fx.bad();
+        setMissed(true);
+        setWrong(k);
+        setTimeout(() => setWrong(null), 600);
+      }
+    }
+
+    function next() {
+      if (i + 1 >= TOTAL) { setDone(true); return; }
+      const n = i + 1;
+      setI(n); setPlaced(0); setMissed(false);
+      setPool(APP.shuffle(items[n].w.map((_, k) => k)));
+    }
+
+    if (done) {
+      return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
+        extra={<p className="text-sm text-slate-500">Preguntas perfectas (sin errores): <b className="text-violet-600">{correct}</b></p>}
+        onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
+        onExit={() => onFinish({ score, correct, total: TOTAL })} />;
+    }
+
+    return (
+      <div className="no-touch-zoom">
+        <GameHeader title={title} subtitle={'Pregunta ' + (i + 1) + ' de ' + TOTAL} onExit={onExit}
+          progress={{ v: i + (complete ? 1 : 0), m: TOTAL }}
+          right={<div className="text-right">
+            <p className="font-black text-violet-600 leading-none">{score}</p>
+            <p className="text-[10px] uppercase font-bold text-slate-400">puntos</p>
+          </div>} />
+
+        <div className="card p-5 sm:p-7 anim-fadeup" key={i}>
+          <p className="text-xs sm:text-sm text-slate-500 mb-4">
+            <i className="fa-solid fa-hand-pointer mr-1 text-violet-500" />
+            Mirá la respuesta y tocá las palabras <b>en orden</b> para escribir la pregunta.
+          </p>
+
+          <div className="flex items-center gap-4">
+            <span className="text-6xl leading-none">{it.pic}</span>
+            <div className="flex-1 rounded-2xl bg-slate-50 border border-slate-200 px-4 py-3">
+              <p className="text-[11px] font-black uppercase tracking-wide text-slate-400">Respuesta</p>
+              <p className="font-black text-lg text-slate-700">{it.reply}</p>
+            </div>
+          </div>
+
+          <div className={'word-line mt-5 ' + (complete ? '!border-emerald-300 !bg-emerald-50' : '')}>
+            {placed === 0 && <span className="text-slate-400 font-bold px-2">Tu pregunta va acá…</span>}
+            {it.w.slice(0, placed).map((w, k) => <span key={k} className="word-placed anim-pop">{w}</span>)}
+          </div>
+
+          {!complete ? (
+            <div className="flex flex-wrap gap-2.5 justify-center mt-5">
+              {pool.map((k) => (
+                <button key={k} data-sfx="none" className={'word-tile ' + (wrong === k ? 'is-bad anim-shake' : '')}
+                        onClick={(e) => tap(k, e)}>{shown(it.w[k], k)}</button>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-2xl p-4 mt-5 bg-emerald-50 border-2 border-emerald-200 anim-pop">
+              <p className="font-black text-emerald-700">{missed ? '¡Lo lograste! Ahora ya sabés cómo va.' : praise()}</p>
+              <div className="flex items-center gap-3 mt-2">
+                <p className="flex-1 text-lg font-black text-slate-800">{sentence}<br /><span className="text-slate-500 font-bold">— {it.reply}</span></p>
+                <SayBtn text={sentence + ' ' + it.reply} />
+              </div>
+              <button className="btn btn-primary mt-4 w-full sm:w-auto" onClick={next}>
+                {i + 1 >= TOTAL ? 'Ver resultado' : 'Siguiente'} <i className="fa-solid fa-arrow-right" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     6i · INGLÉS · LISTENING
+     Los audios del examen con sus preguntas. El audio queda arriba para
+     escucharlo las veces que haga falta.
+     ================================================================== */
+  function ListeningGame({ title, onFinish, onExit }) {
+    const S = useSubject();
+    const tracks = S.LISTENING;
+    const TOTAL = tracks.reduce((a, t) => a + t.items.length, 0);
+    const [ti, setTi] = useState(0);
+    const [qi, setQi] = useState(0);
+    const [chosen, setChosen] = useState(null);
+    const [correct, setCorrect] = useState(0);
+    const [score, setScore] = useState(0);
+    const [done, setDone] = useState(false);
+    const [playing, setPlaying] = useState(false);
+    const audioRef = useRef(null);
+    const stopAt = useRef(null);      // segundo donde frena "escuchar esta parte"
+
+    const t = tracks[ti];
+    const it = t.items[qi];
+    const answered = chosen !== null;
+
+    useEffect(() => () => APP.sfx.duck(false), []);
+
+    /** Reproduce sólo un pedacito del audio (de seg.t a seg.end). */
+    function playPart(seg) {
+      const a = audioRef.current;
+      if (!a) return;
+      stopAt.current = seg.end;
+      a.currentTime = Math.max(0, seg.t);
+      a.play().catch(() => {});
+    }
+    function onTime() {
+      const a = audioRef.current;
+      if (a && stopAt.current != null && a.currentTime >= stopAt.current) { a.pause(); stopAt.current = null; }
+    }
+    function playAll() {
+      const a = audioRef.current;
+      if (!a) return;
+      stopAt.current = null;
+      if (a.paused) a.play().catch(() => {}); else a.pause();
+    }
+
+    function answer(o, ev) {
+      if (answered) return;
+      setChosen(o);
+      if (o === it.ok) {
+        setCorrect((c) => c + 1); setScore((s) => s + 100);
+        fx.good({ x: ev.clientX, y: ev.clientY }, 100);
+      } else fx.bad();
+    }
+    function next() {
+      setChosen(null);
+      if (qi + 1 < t.items.length) { setQi(qi + 1); return; }
+      if (audioRef.current) audioRef.current.pause();
+      if (ti + 1 < tracks.length) { setTi(ti + 1); setQi(0); return; }
+      setDone(true);
+    }
+
+    if (done) {
+      return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
+        extra={<p className="text-sm text-slate-500">Escuchaste los <b className="text-amber-600">2 audios</b> del examen 🎧</p>}
+        onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
+        onExit={() => onFinish({ score, correct, total: TOTAL })} />;
+    }
+
+    const doneSoFar = tracks.slice(0, ti).reduce((a, x) => a + x.items.length, 0) + qi;
+
+    /* Números ya puestos en las fotos (el ejemplo + los ya contestados). */
+    const numbers = {};
+    if (t.pics) {
+      numbers[t.example.id] = t.example.n;
+      t.items.slice(0, qi).forEach((x) => { numbers[x.ok] = x.n; });
+      if (answered) numbers[it.ok] = it.n;
+    }
+
+    return (
+      <div className="no-touch-zoom">
+        <GameHeader title={title} subtitle={t.title} onExit={onExit} progress={{ v: doneSoFar, m: TOTAL }}
+          right={<div className="text-right">
+            <p className="font-black text-amber-600 leading-none"><i className="fa-solid fa-check mr-1" />{correct}</p>
+            <p className="text-[10px] uppercase font-bold text-slate-400">aciertos</p>
+          </div>} />
+
+        {/* Reproductor */}
+        <div className="card p-4 sm:p-5 mb-4" key={'a' + ti}>
+          <p className="font-black text-slate-700"><i className="fa-solid fa-headphones text-amber-500 mr-2" />{t.instr}</p>
+          <audio ref={audioRef} className="w-full mt-3" controls preload="auto" src={t.src}
+                 onTimeUpdate={onTime}
+                 onPlay={() => { setPlaying(true); APP.sfx.duck(true); }}
+                 onPause={() => { setPlaying(false); APP.sfx.duck(false); }}
+                 onEnded={() => { setPlaying(false); APP.sfx.duck(false); }} />
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <button className="btn btn-accent !py-2.5" data-sfx="none" onClick={() => playPart(it)}>
+              <i className="fa-solid fa-ear-listen" /> Escuchar la parte {it.n}
+            </button>
+            <button className="btn btn-ghost !py-2.5" data-sfx="none" onClick={playAll}>
+              <i className={'fa-solid ' + (playing ? 'fa-pause' : 'fa-play')} /> {playing ? 'Pausa' : 'Todo el audio'}
+            </button>
+          </div>
+          {t.example && qi === 0 && !answered && (
+            <button className="text-xs font-bold text-indigo-500 mt-2 underline" data-sfx="none" onClick={() => playPart(t.example)}>
+              Escuchar el ejemplo (número {t.example.n})
+            </button>
+          )}
+        </div>
+
+        <div className="card p-5 sm:p-7 anim-fadeup" key={ti + '-' + qi}>
+          <div className="flex items-center justify-between mb-3">
+            <Chip icon="fa-ear-listen">{t.short}</Chip>
+            <span className="text-xs font-black text-slate-400">{qi + 1} de {t.items.length}</span>
+          </div>
+
+          {t.pics ? (
+            <>
+              <h3 className="text-lg sm:text-2xl font-black mb-4 leading-snug">
+                Número <span className="text-amber-600">{it.n}</span>: ¿qué foto es? Tocala.
+              </h3>
+              <div className="pic-grid">
+                {t.pics.map((p) => {
+                  const used = numbers[p.id] != null && !(answered && p.id === it.ok);
+                  let cls = 'pic-tile';
+                  if (answered) cls += p.id === it.ok ? ' is-ok' : p.id === chosen ? ' is-bad' : ' is-dim';
+                  else if (used) cls += ' is-dim';
+                  return (
+                    <button key={p.id} data-sfx="none" className={cls} disabled={answered || used} title={p.n}
+                            onClick={(e) => answer(p.id, e)}>
+                      {p.e}
+                      {numbers[p.id] != null && <span className="pic-num">{numbers[p.id]}</span>}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="flex items-start gap-3 mb-4">
+                <h3 className="flex-1 text-lg sm:text-2xl font-black leading-snug">{it.n}. {it.q}</h3>
+                <SayBtn text={it.q} />
+              </div>
+              <div className="grid gap-2.5">
+                {it.opts.map((o, k) => {
+                  let cls = 'ww-opt ww-' + k;
+                  if (answered) cls += o === it.ok ? ' is-ok' : o === chosen ? ' is-bad' : ' is-dim';
+                  return (
+                    <button key={o} data-sfx="none" className={cls} disabled={answered} onClick={(e) => answer(o, e)}>
+                      <span className="ww-letter">{'ABC'[k]}</span><span className="flex-1">{o}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {answered && (
+            <Explain ok={chosen === it.ok}
+              why={t.pics ? 'Es la foto de “' + t.pics.find((p) => p.id === it.ok).n + '”.' : 'La respuesta es: ' + it.ok}>
+              <p className="text-sm text-slate-600 mt-2"><b>Lo que dicen en el audio:</b> {it.tr}</p>
+              <div className="flex flex-wrap gap-2 mt-4">
+                <button className="btn btn-ghost" data-sfx="none" onClick={() => playPart(it)}>
+                  <i className="fa-solid fa-rotate-left" /> Escucharlo otra vez
+                </button>
+                <button className="btn btn-primary" onClick={next}>
+                  {qi + 1 < t.items.length ? 'Siguiente' : ti + 1 < tracks.length ? 'Pasar al audio ' + (ti + 2) : 'Ver resultado'} <i className="fa-solid fa-arrow-right" />
+                </button>
+              </div>
             </Explain>
           )}
         </div>
@@ -1590,6 +2422,11 @@
     else if (game.type === 'classify') content = <ClassifyGame key={game.id + nonce} kind={game.id} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'detective') content = <DetectiveGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'resumen')  content = <Resumen onExit={back} />;
+    else if (game.type === 'quiz')     content = <QuizGame key={game.id + nonce} kind={game.id} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'speaking') content = <SpeakingGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'tellme')   content = <TellMeGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'order')    content = <OrderGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'listening') content = <ListeningGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
 
     return (
       <SubjectContext.Provider value={S}>
