@@ -469,10 +469,10 @@ body {
 }
 
 /* Listening: grilla de fotos para numerar */
-.pic-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
+.pic-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; max-width: 26rem; margin: 0 auto; }
 .pic-tile {
   position: relative; aspect-ratio: 1 / 1; border-radius: 1rem; background: #fff;
-  border: 3px solid #e7e6f7; display: grid; place-items: center; font-size: 2.3rem;
+  border: 3px solid #e7e6f7; display: grid; place-items: center; font-size: clamp(2rem, 9vw, 3.2rem);
   transition: transform .12s ease, border-color .2s ease, opacity .2s ease;
 }
 .pic-tile:active:not(:disabled) { transform: scale(.94); }

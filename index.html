@@ -1255,24 +1255,24 @@
     let body;
     switch (scene.rel) {
       case 'on':
-        body = <>{place({ zIndex: 1 })}{thing({ left: '50%', bottom: 'calc(10% + 4.9rem)', fontSize: '3rem', zIndex: 2 })}</>;
+        body = <>{place({ zIndex: 1 })}{thing({ left: '50%', bottom: 'calc(10% + ' + (scene.top || 4.9) + 'rem)', fontSize: '3rem', zIndex: 2 })}</>;
         break;
-      case 'under':
-        body = <>{place({ bottom: '34%', zIndex: 2 })}{thing({ left: '50%', bottom: '6%', fontSize: '2.6rem', zIndex: 1 })}</>;
+      case 'under':   // el mueble en el piso y la cosa chiquita entre las patas
+        body = <>{place({ zIndex: 1, fontSize: '6.4rem' })}{thing({ left: '50%', bottom: '10%', fontSize: '1.9rem', zIndex: 2 })}</>;
         break;
       case 'next to':
         body = <>{place({ left: '36%', zIndex: 1 })}{thing({ left: '74%', bottom: '10%', fontSize: '3.2rem', zIndex: 2 })}</>;
         break;
       case 'behind':
-        body = <>{thing({ left: '58%', bottom: 'calc(10% + 2.6rem)', fontSize: '3rem', zIndex: 1, filter: 'brightness(.85)' })}{place({ zIndex: 2 })}</>;
+        body = <>{thing({ left: '57%', bottom: 'calc(10% + 3.9rem)', fontSize: '3rem', zIndex: 1, filter: 'brightness(.85)' })}{place({ zIndex: 2 })}</>;
         break;
-      case 'in front of':
-        body = <>{place({ bottom: '22%', fontSize: '5rem', zIndex: 1 })}{thing({ left: '50%', bottom: '3%', fontSize: '3.6rem', zIndex: 2 })}</>;
+      case 'in front of':   // los dos en el piso; la cosa más adelante y tapando la parte de abajo
+        body = <>{place({ left: '54%', bottom: '24%', fontSize: '5rem', zIndex: 1 })}{thing({ left: '44%', bottom: '3%', fontSize: '4rem', zIndex: 2 })}</>;
         break;
       default:   // 'in': el recipiente dos veces, el de adelante recortado
         body = <>{place({ zIndex: 1 })}
-                 {thing({ left: '50%', bottom: 'calc(10% + 2.3rem)', fontSize: '2.6rem', zIndex: 2 })}
-                 {place({ zIndex: 3, clipPath: 'inset(48% 0 0 0)' })}</>;
+                 {thing({ left: '50%', bottom: 'calc(10% + 2.6rem)', fontSize: '3rem', zIndex: 2 })}
+                 {place({ zIndex: 3, clipPath: 'inset(58% 0 0 0)' })}</>;
     }
     return <div className="scene" aria-hidden="true">{body}</div>;
   }
@@ -1701,7 +1701,7 @@
           </div>
 
           {/* Lo que ya armó */}
-          {si > 0 && !hide && (
+          {si > 0 && !finished && (
             <div className="rounded-2xl bg-fuchsia-50/70 border border-fuchsia-100 p-4 mt-4 space-y-1">
               {t.steps.slice(0, si).map((x, k) => (
                 <p key={k} className="font-bold text-slate-700 anim-fadeup"><span className="text-fuchsia-400 font-black mr-1">{k + 1}.</span>{fill(x)}</p>

@@ -149,6 +149,7 @@
     { t: '5. He / She / It + S', p: [
       'Con HE, SHE, IT (o una sola persona: my mum, Tom, the cat) el verbo lleva S: she reads, he plays, it swims.',
       'Si el verbo termina en consonante + Y, cambia a IES: study → studies.',
+      'Si termina en -O, -CH, -SH, -SS o -X, agrega ES: go → goes, watch → watches.',
       'Con I, WE, YOU, THEY el verbo va sin S: I read, we study, they play.',
       'Lo mismo con have got: he / she / it HAS got · I / you / we / they HAVE got.',
       'Preguntas: Does he climb a tree? — Yes, he does. · What does she like doing? — She likes doing puzzles.'
@@ -188,8 +189,6 @@
        · text: un texto para leer arriba. [[así]] se marca resaltado.
        · say:  lo que lee la voz (si no, la oración completa).
      ===================================================================== */
-  const QW = 'Las question words: What = qué/cuál · Who = quién · Where = dónde · When = cuándo · How = cómo.';
-
   /* --- Juego 1 de la plataforma: "Question Words" (tal cual) ---------- */
   const WW1 = [
     { q: '___ is your name?',                       opts: ['Where', 'Who', 'What'],  ok: 'What',  why: 'What’s your name? = ¿Cuál es tu nombre?' },
@@ -240,7 +239,7 @@
 
   /* --- Preguntas extra de la ficha de Speaking (respuestas de Santi) --- */
   const WWX = [
-    { q: '___ do you spell it? — S-A-N-T-I.',              opts: ['What', 'How', 'Who'],          ok: 'How',      why: 'How do you spell it? = ¿Cómo se deletrea?' },
+    { q: '___ do you spell it? — S-A-N-T-I-A-G-O.',              opts: ['What', 'How', 'Who'],          ok: 'How',      why: 'How do you spell it? = ¿Cómo se deletrea?' },
     { q: '___ friends have you got? — I’ve got five friends.', opts: ['How old', 'How many', 'Who'], ok: 'How many', why: 'How many = ¿Cuántos? (para contar cosas o personas).' },
     { q: '___ do you feel today? — I’m happy.',            opts: ['How', 'Where', 'When'],        ok: 'How',      why: 'How do you feel today? = ¿Cómo te sentís hoy?' },
     { q: '___ is your birthday? — It’s in April.',         opts: ['Where', 'When', 'What'],       ok: 'When',     why: 'When is your birthday? — It’s in April.' },
@@ -258,9 +257,9 @@
   ];
   const PLACES = [
     { e: '📦', n: 'box',    rels: ['in', 'on', 'next to', 'behind', 'in front of'] },
-    { e: '🪑', n: 'chair',  rels: ['on', 'under', 'next to', 'behind', 'in front of'] },
-    { e: '🛏️', n: 'bed',    rels: ['on', 'under', 'next to'] },
-    { e: '🧺', n: 'basket', rels: ['in', 'next to', 'behind', 'in front of'] }
+    { e: '🪑', n: 'chair',  rels: ['on', 'under', 'next to', 'in front of'] },   // "behind" no: la silla es finita y no tapa
+    { e: '🛏️', n: 'bed',    rels: ['on', 'under', 'next to'], top: 2.4 },   // top: alto de la cama (para "on")
+    { e: '🧺', n: 'basket', rels: ['in', 'next to', 'in front of'] }   // "behind" no: se confunde con "in"
   ];
   const ALL_RELS = ['in', 'on', 'under', 'next to', 'behind', 'in front of'];
   const REL_ES = { 'in': 'adentro de', 'on': 'arriba de', 'under': 'debajo de', 'next to': 'al lado de',
@@ -275,10 +274,12 @@
     const t = APP.pick(THINGS, 1)[0];
     const p = APP.pick(PLACES, 1)[0];
     const rel = APP.pick(p.rels, 1)[0];
-    const others = APP.pick(ALL_RELS.filter((r) => r !== rel), 2);
+    // En el dibujo "behind" se puede parecer a "in" o a "on": nunca van juntas como opciones.
+    const CONFUSE = { 'in': ['behind'], 'on': ['behind'], 'behind': ['in', 'on'] };
+    const others = APP.pick(ALL_RELS.filter((r) => r !== rel && (CONFUSE[rel] || []).indexOf(r) === -1), 2);
     const line = (r) => 'It’s ' + r + ' the ' + p.n + '.';
     return {
-      scene: { kind: 'obj', thing: t.e, place: p.e, rel: rel },
+      scene: { kind: 'obj', thing: t.e, place: p.e, rel: rel, top: p.top },
       q: 'Where is the ' + t.n + '?',
       opts: APP.shuffle([rel].concat(others)).map(line),
       ok: line(rel),
@@ -295,7 +296,7 @@
     let ok, bad;
     if (mid) {
       ok = pr + ' between ' + a + ' and ' + c + '.';
-      bad = [pr + ' next to ' + a + ' and ' + c + '.', pr + ' between ' + a + ' and ' + b + '.', pr + ' under ' + a + '.'];
+      bad = [pr + ' behind ' + a + '.', pr + ' under ' + c + '.', pr + ' in front of ' + a + '.'];
     } else {
       const other = who === row[0] ? c : a;
       ok = pr + ' next to ' + b + '.';
@@ -331,9 +332,9 @@
     { pic: '☀️',       q: 'What’s the weather like?', ok: 'It’s sunny.',     bad: ['It’s rainy.', 'It’s cloudy.'],              why: 'Sunny = soleado.' },
     { pic: '☁️',       q: 'What’s the weather like?', ok: 'It’s cloudy.',    bad: ['It’s sunny.', 'It’s windy.'],               why: 'Cloudy = nublado.' },
     { pic: '🌧️',       q: 'What’s the weather like?', ok: 'It’s rainy.',     bad: ['It’s snowy.', 'It’s sunny.'],               why: 'Rainy = lluvioso.' },
-    { pic: '🏊',       q: 'What is he doing?',    ok: 'He’s swimming.',      bad: ['He swimming.', 'He’s flying.'],             why: 'Ahora mismo: He’s + verbo con -ing.' },
+    { pic: '🏊‍♂️',     q: 'What is he doing?',    ok: 'He’s swimming.',      bad: ['He swimming.', 'He’s flying.'],             why: 'Ahora mismo: He’s + verbo con -ing.' },
     { pic: '👨‍✈️✈️',  q: 'What’s he doing?',     ok: 'He’s flying a plane.', bad: ['He’s driving a car.', 'He flying a plane.'], why: 'Del examen: What’s he doing? — He’s flying a plane.' },
-    { pic: '🧗',       q: 'What is she doing?',   ok: 'She’s climbing.',     bad: ['She’s swimming.', 'She climbing.'],         why: 'Climb = trepar. She’s climbing.' },
+    { pic: '🧗‍♀️',     q: 'What is she doing?',   ok: 'She’s climbing.',     bad: ['She’s swimming.', 'She climbing.'],         why: 'Climb = trepar. She’s climbing.' },
     { pic: '🚗',       q: 'What can you do with this?', ok: 'I can drive it.', bad: ['I can fly it.', 'It’s drive.'],          why: 'Drive = manejar.' },
     { pic: '🦅',       q: 'What can it do?',      ok: 'It can fly.',         bad: ['It can swim.', 'It can’t fly.'],            why: 'Eagle = águila: It can fly. It has got wings.' },
     { pic: '🦍',       q: 'What is this?',        ok: 'It’s a gorilla.',     bad: ['It’s a bear.', 'They’re gorillas.'],        why: 'Gorilla = gorila.' },
@@ -388,7 +389,8 @@
     const gaps = [];
     for (let g = 2; g <= 6; g++) {           // el 1 (drive) es el ejemplo del examen
       const ok = BEACH[g * 2 - 1];
-      const bad = APP.pick(BEACH_BOX.filter((w) => w !== ok && w !== 'drive'), 3);
+      const used = [1, 2, 3, 4, 5, 6].filter((x) => x < g).map((x) => BEACH[x * 2 - 1]);
+      const bad = APP.pick(BEACH_BOX.filter((w) => w !== ok && used.indexOf(w) === -1), 3);
       gaps.push({
         text: beachText(g),
         q: 'The beach · ¿Qué palabra va en el hueco ' + g + '?',
@@ -454,7 +456,7 @@
     { q: 'Who is your favourite star?',       a: 'My favourite star is Julia Roberts.', tip: 'My favourite star is…' },
     { q: 'What is your favourite film?',      a: 'My favourite film is Toy Story.',    tip: 'My favourite film is…' },
     { q: 'What’s your favourite colour?',     a: 'My favourite colour is blue.',       tip: 'My favourite colour is… (decí el tuyo).' },
-    { q: 'How many brothers or sisters have you got?', a: 'I have got one sister. / I haven’t got brothers or sisters.', tip: 'I have got… / I haven’t got…' },
+    { q: 'How many brothers or sisters have you got?', a: 'I have got one sister. / I haven’t got any brothers or sisters.', tip: 'I have got… / I haven’t got…' },
     { q: 'What’s your favourite food?',       a: 'My favourite food is pizza.',        tip: 'My favourite food is…' },
     { q: 'What do you like doing?',           a: 'I like playing football.',           tip: 'I like + verbo con -ing.' }
   ];
@@ -487,7 +489,7 @@
       { q: 'What can you do with this?', a: 'I can play football.' } ] },
     { pic: '🚲', qs: [
       { q: 'What’s this?', a: 'It’s a bike.' },
-      { q: 'What colour is it?', a: 'It’s red.' },
+      { q: 'Have you got a bike?', a: 'Yes, I have. / No, I haven’t.' },
       { q: 'What can you do with this?', a: 'I can ride it.' } ] },
     { pic: '🐚🐚🐚', qs: [
       { q: 'What are these?', a: 'They’re shells.' },
@@ -501,7 +503,7 @@
         { e: '🧒', n: 'Sam',   d: '🛴', act: 'riding a scooter' },
         { e: '👧', n: 'Carol', d: '⚽', act: 'playing football' },
         { e: '👦', n: 'Bob',   d: '🏖️', act: 'playing in the sand' },
-        { e: '👧🏽', n: 'Danny', d: '🪁', act: 'flying a kite' } ],
+        { e: '👦🏽', n: 'Danny', d: '🪁', act: 'flying a kite' } ],
       qs: [
         { q: 'How many children are there?', a: 'There are four children.' },
         { q: 'What is Carol doing?',         a: 'She’s playing football.' },
@@ -523,7 +525,7 @@
         { e: '👦', n: 'Jack', d: '🎾', act: 'playing tennis' },
         { e: '🐴', n: 'the horse', d: '🌊', act: 'swimming' } ],
       qs: [
-        { q: 'What’s the weather like?',      a: 'It’s sunny.' },
+        { q: 'Is the horse swimming?',        a: 'Yes, it is.' },
         { q: 'What is Lucy eating?',          a: 'She’s eating watermelon.' },
         { q: 'Is Jack swimming?',             a: 'No, he isn’t. He’s playing tennis.' },
         { q: 'Who is between Mum and Jack?',  a: 'Lucy is between Mum and Jack.' } ] }
@@ -560,7 +562,7 @@
         { s: 'He ___ playing football.',              opts: ['likes', 'like', 'liking'],   ok: 'likes',   why: 'Con HE el verbo lleva S: he likes.' },
         { s: 'He can run fast but he ___ swim.',      opts: ['can’t', 'isn’t', 'hasn’t'],  ok: 'can’t',   why: 'can … but … can’t.' }
       ] },
-    { id: 'country', title: 'your favourite country', pic: '🇧🇷',
+    { id: 'country', title: 'your favourite country', pic: '🏖️',   // (las banderas emoji no se ven en Windows)
       steps: [
         { s: 'My favourite country is ___.',          opts: ['Brazil', 'Brazilian', 'sunny'], ok: 'Brazil', why: 'El país: Brazil. (Brazilian = brasileño.)' },
         { s: 'It’s big and ___.',                     opts: ['hot', 'cold', 'snowy'],      ok: 'hot',     why: 'En Brasil hace calor: hot.' },
@@ -572,7 +574,7 @@
         { s: 'My favourite toy ___ my teddy bear.',   opts: ['is', 'are', 'have'],         ok: 'is',      why: 'My favourite toy IS…' },
         { s: 'It’s brown ___ soft.',                  opts: ['and', 'but', 'is'],          ok: 'and',     why: 'Brown AND soft = marrón y suave.' },
         { s: 'It ___ got two big eyes.',              opts: ['has', 'have', 'is'],         ok: 'has',     why: 'Con IT: has got.' },
-        { s: 'It ___ got a mouth.',                   opts: ['hasn’t', 'haven’t', 'don’t'], ok: 'hasn’t', why: 'Con IT, en negativo: hasn’t got.' }
+        { s: 'It ___ got shoes.',                   opts: ['hasn’t', 'haven’t', 'don’t'], ok: 'hasn’t', why: 'Con IT, en negativo: hasn’t got.' }
       ] }
   ].map((t) => Object.assign(t, {
     text: t.steps.map((st) => st.s.replace('___', st.ok).replace(/\s+([.,])/g, '$1')).join(' ')
@@ -607,7 +609,7 @@
     { pic: '🛒', w: ['Where', 'were', 'you', 'yesterday', '?'],           reply: 'I was at the market.' },
     { pic: '🌳', w: ['Does', 'he', 'climb', 'a tree', 'after school', '?'], reply: 'Yes, he does.' },
     { pic: '🎧', w: ['What', 'are', 'these', '?'],                        reply: 'They’re headphones.' },
-    { pic: '📛', w: ['What’s', 'your', 'name', '?'],                      reply: 'My name is Santiago.' },
+    { pic: '🙋', w: ['What’s', 'your', 'name', '?'],                      reply: 'My name is Santiago.' },
     { pic: '🎂', w: ['How', 'old', 'are', 'you', '?'],                    reply: 'I’m nine years old.' },
     { pic: '📅', w: ['When', 'is', 'your', 'birthday', '?'],              reply: 'It’s in April.' },
     { pic: '🌎', w: ['Where', 'are', 'you', 'from', '?'],                 reply: 'I’m from Argentina.' },
@@ -636,7 +638,7 @@
       { id: 'q2', a: 'How are you?',                 b: 'I’m fine, thank you.' },
       { id: 'q3', a: 'What is your favourite film?', b: 'My favourite film is Toy Story.' },
       { id: 'q4', a: 'How old is your grandma?',     b: 'She’s sixty-five years old.' },
-      { id: 'q5', a: 'How do you spell it?',         b: 'S - A - N - T - I.' }
+      { id: 'q5', a: 'How do you spell it?',         b: 'S-A-N-T-I-A-G-O.' }
     ]},
     { title: 'Question words en castellano', pairs: [
       { id: 'w1', a: 'What',  b: '¿Qué? / ¿Cuál?' },
@@ -732,8 +734,8 @@
     { id: 'ifc65', deck: 'Vocabulary', f: '🚗 drive', say: 'drive', b: 'manejar' },
     { id: 'ifc66', deck: 'Vocabulary', f: '🦍 gorilla', say: 'gorilla', b: 'gorila' },
     { id: 'ifc67', deck: 'Vocabulary', f: '🐞 ladybird', say: 'ladybird', b: 'vaquita de San Antonio' },
-    { id: 'ifc68', deck: 'Vocabulary', f: '🪜 stairs', say: 'stairs', b: 'escaleras' },
-    { id: 'ifc69', deck: 'Vocabulary', f: '🛝 swing', say: 'swing', b: 'hamaca' },
+    { id: 'ifc68', deck: 'Vocabulary', f: 'stairs', say: 'stairs', b: 'escaleras (de una casa)' },
+    { id: 'ifc69', deck: 'Vocabulary', f: 'swing', say: 'swing', b: 'hamaca (de la plaza)' },
     { id: 'ifc70', deck: 'Vocabulary', f: '🛍️ shopping centre', say: 'shopping centre', b: 'shopping' },
     { id: 'ifc71', deck: 'Vocabulary', f: '🧺 picnic', say: 'picnic', b: 'picnic' },
     { id: 'ifc72', deck: 'Vocabulary', f: '🌱 gardening', say: 'gardening', b: 'jardinería (plantar en macetas)' },
