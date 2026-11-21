@@ -484,3 +484,173 @@ body {
   border-radius: .45rem; background: var(--c-primary); color: #fff; font-size: .8rem; font-weight: 900;
   display: grid; place-items: center;
 }
+
+/* ------------- LENGUA: partes marcables (historieta, noticia, aviso) ------------- */
+.part { position: relative; }
+.part-labeled { outline: 2.5px dashed var(--pc); outline-offset: 3px; border-radius: .45rem; }
+.part-tag {
+  position: absolute; top: -.95rem; left: .3rem; z-index: 6;
+  background: var(--pc); color: #fff;
+  font: 900 .6rem/1 'Nunito', system-ui, sans-serif; font-style: normal;
+  text-transform: uppercase; letter-spacing: .04em; text-decoration: none;
+  padding: .22rem .4rem; border-radius: .4rem; white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25); pointer-events: none;
+  -webkit-text-stroke: 0; text-shadow: none; transform: none;
+}
+.part-tap { cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+.part-tap:hover  { box-shadow: 0 0 0 3px #fdba74; border-radius: .45rem; }
+.part-tap:active { transform: scale(.97); }
+.part-ok  { box-shadow: 0 0 0 4px var(--c-ok) !important; border-radius: .45rem; animation: glowOk .7s ease-out; }
+.part-bad { box-shadow: 0 0 0 4px var(--c-bad) !important; border-radius: .45rem; animation: shakeX .42s ease; }
+.legend-dot { width: .9rem; height: .9rem; border-radius: 99px; flex-shrink: 0; margin-top: .2rem; }
+
+/* Barra de respuesta fija abajo (Encontrá las partes) */
+.answer-bar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+  padding: .25rem 0 calc(.75rem + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, .94); backdrop-filter: blur(8px);
+  border-top: 1px solid #e0e7ff; box-shadow: 0 -8px 24px rgba(30, 27, 58, .12);
+  animation: fadeUp .3s ease both;
+}
+
+/* Historieta */
+.comic-title { font-weight: 900; text-align: center; font-size: 1.15rem; margin-bottom: .6rem; }
+.comic-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem;
+  border: 3px solid #1e1b3a; padding: .5rem; border-radius: .6rem; background: #fff;
+}
+.comic-panel {
+  position: relative; min-height: 15.5rem; padding: .5rem .4rem .4rem;
+  border: 2.5px solid #1e1b3a; border-radius: .3rem;
+  display: flex; flex-direction: column; gap: .5rem;
+}
+.comic-num {
+  position: absolute; right: .3rem; top: .25rem; font-size: .6rem; font-weight: 900;
+  color: #64748b; background: rgba(255, 255, 255, .75); border-radius: 99px; padding: 0 .3rem;
+}
+.fondo-plaza  { background: linear-gradient(#dbeafe 0 64%, #bbf7d0 64%); }
+.fondo-casa   { background: linear-gradient(#fef3c7 0 70%, #e7d3b0 70%); }
+.fondo-noche  { background: linear-gradient(#312e81 0 70%, #4c1d95 70%); }
+.fondo-fiesta {
+  background:
+    radial-gradient(circle at 18% 22%, #f9a8d4 0 6%, transparent 7%),
+    radial-gradient(circle at 82% 30%, #fde68a 0 6%, transparent 7%),
+    radial-gradient(circle at 60% 12%, #a5f3fc 0 5%, transparent 6%),
+    linear-gradient(#fce7f3 0 70%, #f5d0fe 70%);
+}
+.fondo-noche .comic-name { background: rgba(255, 255, 255, .85); }
+.comic-cartel {
+  align-self: flex-start; max-width: 88%;
+  background: #fef08a; border: 2px solid #1e1b3a; border-radius: 2px;
+  padding: .3rem .45rem; font-size: .72rem; font-weight: 800; font-style: italic; line-height: 1.2;
+}
+.comic-ono {
+  align-self: center; padding: 0 .3rem; line-height: 1.1;
+  font-weight: 900; font-size: 1.45rem; letter-spacing: .03em; color: #ef4444;
+  -webkit-text-stroke: 1px #1e1b3a; text-shadow: 2px 2px 0 #facc15;
+  transform: rotate(-7deg);
+}
+.comic-chars { margin-top: auto; display: flex; justify-content: space-around; align-items: flex-end; gap: .3rem; }
+.comic-char  { display: flex; flex-direction: column; align-items: center; min-width: 0; flex: 1; }
+.comic-globo {
+  background: #fff; border: 2px solid #1e1b3a; border-radius: 1rem;
+  padding: .3rem .45rem; margin-bottom: .7rem; max-width: 100%;
+  font-size: .72rem; font-weight: 800; line-height: 1.2; text-align: center;
+}
+.comic-globo::after {   /* la colita que sale de la boca */
+  content: ''; position: absolute; left: 50%; bottom: -7px; width: 11px; height: 11px;
+  background: #fff; border-right: 2px solid #1e1b3a; border-bottom: 2px solid #1e1b3a;
+  transform: translateX(-50%) rotate(45deg);
+}
+.comic-globo.piensa { border-radius: 1.4rem; border-style: dashed; }
+.comic-globo.piensa::after {   /* globo de pensamiento: burbujitas */
+  width: 9px; height: 9px; bottom: -12px; border: 2px solid #1e1b3a; border-radius: 50%;
+  transform: translateX(-50%);
+}
+.comic-figure { position: relative; display: flex; align-items: flex-end; justify-content: center; }
+.comic-emoji  { font-size: 2.6rem; line-height: 1; }
+.comic-obj    { font-size: 1.5rem; line-height: 1; margin-left: .1rem; }
+.comic-meta   { position: absolute; top: -.6rem; right: -1rem; z-index: 2; font-size: 1.3rem; line-height: 1; }
+.comic-meta.zzz { font-weight: 900; font-size: 1rem; font-style: italic; color: #1e3a8a; }
+.fondo-noche .comic-meta.zzz { color: #e0e7ff; }
+.comic-name {
+  margin-top: .15rem; padding: 0 .35rem; border-radius: 99px; white-space: nowrap;
+  font-size: .6rem; font-weight: 900; color: #475569; background: rgba(255, 255, 255, .8);
+}
+@media (min-width: 640px) {
+  .comic-panel  { min-height: 17rem; }
+  .comic-cartel, .comic-globo { font-size: .85rem; }
+  .comic-emoji  { font-size: 3.2rem; }
+  .comic-ono    { font-size: 1.9rem; }
+}
+
+/* Noticia */
+.news {
+  background: #fffdf7; border: 1px solid #e7e5e4; border-radius: 1rem; padding: 1rem;
+  font-family: Georgia, 'Times New Roman', serif; color: #1c1917;
+}
+.news-head {
+  display: flex; justify-content: space-between; align-items: baseline; gap: .5rem;
+  border-bottom: 3px double #1c1917; padding-bottom: .35rem; margin-bottom: 1.1rem;
+  font: 800 .65rem 'Nunito', sans-serif; text-transform: uppercase; letter-spacing: .06em; color: #78716c;
+}
+.news-head span:first-child { font: 900 1.05rem Georgia, serif; text-transform: none; letter-spacing: 0; color: #1c1917; }
+.news-volanta { display: inline-block; font: 900 .72rem 'Nunito', sans-serif; text-transform: uppercase; letter-spacing: .1em; color: #0e7490; }
+.news-titulo  { font-size: 1.45rem; font-weight: 900; line-height: 1.15; margin: .45rem 0 .55rem; }
+.news-copete  { font-size: .98rem; font-style: italic; color: #44403c; line-height: 1.4; }
+.news-body    { display: grid; gap: 1.1rem; margin-top: 1.2rem; }
+.news-fig     { margin: 0; }
+.news-img {
+  display: grid; place-items: center; min-height: 8.5rem; padding: .5rem;
+  font-size: 2.5rem; letter-spacing: .12em; text-align: center; line-height: 1.2;
+  background: linear-gradient(160deg, #e0f2fe, #dcfce7); border: 1px solid #d6d3d1; border-radius: .6rem;
+}
+.news-epi     { font-size: .78rem; color: #57534e; margin-top: .5rem; font-style: italic; line-height: 1.35; }
+.news-cuerpo p { font-size: .92rem; line-height: 1.5; margin: 0 0 .55rem; }
+.news-cuerpo p:last-child { margin-bottom: 0; }
+.news-brief .news-titulo { font-size: 1.15rem; }
+.news-img-sm  { min-height: 4.5rem; width: 4.8rem; flex-shrink: 0; font-size: 1.15rem; letter-spacing: 0; }
+@media (min-width: 640px) {
+  .news { padding: 1.4rem; }
+  .news-titulo { font-size: 2rem; }
+  .news-body { grid-template-columns: 1fr 1.25fr; align-items: start; }
+  .news-brief .news-titulo { font-size: 1.4rem; }
+}
+
+/* Avisos (publicidad y propaganda) */
+.aviso {
+  position: relative; border-radius: 1.25rem; padding: 1.2rem 1rem 1rem; text-align: center;
+  border: 3px solid; box-shadow: var(--shadow-md);
+}
+.aviso-amber   { background: linear-gradient(160deg, #fef3c7, #fde68a); border-color: #f59e0b; }
+.aviso-sky     { background: linear-gradient(160deg, #e0f2fe, #bae6fd); border-color: #0ea5e9; }
+.aviso-rose    { background: linear-gradient(160deg, #ffe4e6, #fecdd3); border-color: #f43f5e; }
+.aviso-emerald { background: linear-gradient(160deg, #d1fae5, #a7f3d0); border-color: #10b981; }
+.aviso-lime    { background: linear-gradient(160deg, #ecfccb, #d9f99d); border-color: #84cc16; }
+.aviso-tipo {
+  display: inline-block; margin-bottom: .5rem; padding: .2rem .6rem; border-radius: 99px;
+  font-size: .62rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; color: #fff;
+}
+.aviso-tipo.publicidad { background: #d97706; }
+.aviso-tipo.propaganda { background: #059669; }
+.aviso-pic  { font-size: 2.7rem; letter-spacing: .15em; line-height: 1.1; }
+.aviso-tit  { font-weight: 900; font-size: 1.4rem; line-height: 1.2; margin: .6rem 0 .5rem; }
+.aviso-txt  { font-weight: 700; color: #334155; font-size: .95rem; line-height: 1.6; }
+.aviso-word { display: inline-block; }
+.aviso-marca {
+  display: inline-block; margin-top: 1rem; padding: .3rem .65rem; border-radius: 99px;
+  font-size: .7rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em;
+  color: #475569; background: rgba(255, 255, 255, .75);
+}
+
+/* Tildes: palabra en sílabas */
+.sil-word   { font-weight: 800; color: #334155; }
+.sil-strong { color: #e11d48; font-weight: 900; text-decoration: underline; text-underline-offset: 3px; }
+.comic-meta > .part-tag { top: auto; bottom: -1.05rem; left: 50%; transform: translateX(-50%); }
+
+/* Con los nombres visibles, más aire para que las etiquetas no tapen el texto */
+.news-titulo.part-labeled, .news-copete.part-labeled { margin-top: 1.35rem; }
+.news-epi.part-labeled { margin-top: 1.3rem; }
+.aviso:has(.part-labeled) .aviso-tit { line-height: 1.9; margin-top: 1rem; }
+.aviso:has(.part-labeled) .aviso-txt { line-height: 2.6; }
+.aviso-marca.part-labeled { margin-top: 1.5rem; }

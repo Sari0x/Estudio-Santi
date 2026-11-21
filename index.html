@@ -949,7 +949,7 @@
         setRes(null);
         if (nextLives <= 0 || i + 1 >= TOTAL) setOver(true);
         else setI(i + 1);
-      }, ok ? 750 : 1600);
+      }, ok ? 750 : item.why ? 3000 : 1600);
     }
     resolveRef.current = resolve;
 
@@ -1078,6 +1078,7 @@
                     <span className="block text-sm text-slate-600 font-semibold mt-1">
                       “{item.t}” va en <b>{bucketName(item.p)}</b>.
                     </span>
+                    {item.why && <span className="block text-sm text-slate-600 font-semibold mt-1">{item.why}</span>}
                   </p>}
             </div>
           )}
@@ -1092,9 +1093,10 @@
      qué clase de palabra es y dos preguntas más sobre ella. Los casos los
      arma la materia (S.DETECTIVE.build()).
      ================================================================== */
-  function DetectiveGame({ title, onFinish, onExit }) {
+  function DetectiveGame({ kind, title, onFinish, onExit }) {
     const S = useSubject();
-    const [cases] = useState(() => S.DETECTIVE.build().map((c) => ({
+    const cfg = S.DETECTIVES[kind];
+    const [cases] = useState(() => cfg.build().map((c) => ({
       ...c,
       steps: c.steps.map((st) => {
         const opts = st.opts.filter((o, k) => st.opts.indexOf(o) === k);
@@ -1145,18 +1147,19 @@
 
     if (done) {
       return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
-        extra={<p className="text-sm text-slate-500">Investigaste <b className="text-indigo-600">{cases.length}</b> palabras 🔎</p>}
+        extra={<p className="text-sm text-slate-500">Investigaste <b className="text-indigo-600">{cases.length}</b> {cfg.units} 🔎</p>}
         onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
         onExit={() => onFinish({ score, correct, total: TOTAL })} />;
     }
 
-    const parts = c.s.split('*');   // [antes, palabra, después]
+    const parts = c.s ? c.s.split('*') : null;   // [antes, palabra, después]
+    const unit = cfg.unit.charAt(0).toUpperCase() + cfg.unit.slice(1);
 
     return (
       <div className="no-touch-zoom">
         <GameHeader
           title={title}
-          subtitle={'Palabra ' + (ci + 1) + ' de ' + cases.length + ' · pista ' + (si + 1) + ' de ' + c.steps.length}
+          subtitle={unit + ' ' + (ci + 1) + ' de ' + cases.length + ' · pista ' + (si + 1) + ' de ' + c.steps.length}
           onExit={onExit}
           progress={{ v: doneSoFar, m: TOTAL }}
           right={
@@ -1178,11 +1181,16 @@
             </div>
           </div>
 
-          <p className="rounded-2xl bg-indigo-50/70 border border-indigo-100 px-4 py-4 text-lg sm:text-2xl font-bold text-slate-700 leading-relaxed text-center">
-            {parts[0]}
-            <mark className="px-1.5 py-0.5 rounded-lg bg-amber-200 text-amber-900 font-black">{parts[1]}</mark>
-            {parts[2]}
-          </p>
+          {c.news ? <NewsBrief n={c.news} /> : (
+            <div className="rounded-2xl bg-indigo-50/70 border border-indigo-100 px-4 py-4 text-center">
+              <p className="text-lg sm:text-2xl font-bold text-slate-700 leading-relaxed">
+                {parts[0]}
+                <mark className="px-1.5 py-0.5 rounded-lg bg-amber-200 text-amber-900 font-black">{parts[1]}</mark>
+                {parts[2]}
+              </p>
+              {c.sil && <p className="text-xs font-bold text-slate-400 mt-1">La escribimos sin tilde a propósito · sílabas: {c.sil}</p>}
+            </div>
+          )}
 
           <h3 className="text-lg sm:text-2xl font-black mt-5 mb-4 leading-snug">{st.q}</h3>
 
@@ -1208,11 +1216,489 @@
           {answered && (
             <Explain ok={chosen === st.ok} why={st.why}>
               <button className="btn btn-primary mt-4 w-full sm:w-auto" onClick={next}>
-                {lastStep && lastCase ? 'Ver resultado' : lastStep ? 'Siguiente palabra' : 'Siguiente pista'} <i className="fa-solid fa-arrow-right" />
+                {lastStep && lastCase ? 'Ver resultado' : lastStep ? 'Siguiente ' + cfg.unit : 'Siguiente pista'} <i className="fa-solid fa-arrow-right" />
               </button>
             </Explain>
           )}
         </div>
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     6b2 · LENGUA · EJEMPLOS DIBUJADOS (historieta, noticia y aviso)
+     Cada parte es un <Part>. En "Ejemplos con sus partes" muestra su
+     nombre (labels); en "Encontrá las partes" se toca (onTap).
+     ================================================================== */
+  const PartCtx = React.createContext({});
+
+  function Part({ type, k, as, className, noTag, children }) {
+    const ctx = useContext(PartCtx);
+    const info = useSubject().PART_INFO[type] || {};
+    const Tag = as || 'div';
+    let cls = 'part ' + (className || '');
+    if (ctx.labels) cls += ' part-labeled';
+    if (ctx.onTap) cls += ' part-tap';
+    if (ctx.reveal === type) cls += ' part-ok';
+    if (ctx.bad != null && ctx.bad === k) cls += ' part-bad';
+    return (
+      <Tag className={cls} style={{ '--pc': info.c }}
+           onClick={ctx.onTap ? (e) => { e.stopPropagation(); ctx.onTap(type, k, e); } : undefined}>
+        {children}
+        {ctx.labels && !noTag && <span className="part-tag">{info.n}</span>}
+      </Tag>
+    );
+  }
+
+  /** Texto de un aviso: [[pista]] y {{palabras lindas}} quedan como partes.
+      `seen` evita repetir la etiqueta de un mismo tipo dentro del aviso. */
+  function Rich({ text, k, seen }) {
+    return text.split(/(\[\[.*?\]\]|\{\{.*?\}\})/).map((t, j) => {
+      const type = t.startsWith('[[') ? 'pista' : t.startsWith('{{') ? 'lindas' : null;
+      if (!type) return t;
+      const first = !seen[type];
+      seen[type] = true;
+      return <Part key={j} as="span" type={type} k={k + j} noTag={!first} className="aviso-word">{t.slice(2, -2)}</Part>;
+    });
+  }
+
+  function Historieta({ h }) {
+    return (
+      <div className="comic">
+        <p className="comic-title">{h.titulo}</p>
+        <div className="comic-grid">
+          {h.vinetas.map((v, i) => (
+            <div key={i} className={'comic-panel fondo-' + (v.fondo || 'plaza')}>
+              <span className="comic-num">{i + 1}</span>
+              {v.cartel && <Part type="cartel" k={'c' + i} className="comic-cartel">{v.cartel}</Part>}
+              {v.ono && <Part type="ono" k={'o' + i} className="comic-ono">{v.ono}</Part>}
+              <div className="comic-chars">
+                {(v.pjs || []).map((p, j) => (
+                  <div key={j} className="comic-char">
+                    {p.globo && (
+                      <Part type="globo" k={'g' + i + j} className={'comic-globo' + (p.piensa ? ' piensa' : '')}>{p.globo}</Part>
+                    )}
+                    <div className="comic-figure">
+                      {p.meta && <Part type="meta" k={'m' + i + j} className={'comic-meta' + (p.meta === 'Zzz' ? ' zzz' : '')}>{p.meta}</Part>}
+                      <span className="comic-emoji">{p.e}</span>
+                      {p.obj && <span className="comic-obj">{p.obj}</span>}
+                    </div>
+                    {p.n && <span className="comic-name">{p.n}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function Noticia({ n }) {
+    return (
+      <article className="news">
+        <div className="news-head"><span>El Diario del Barrio</span><span>{n.fecha}</span></div>
+        <Part type="volanta" k="vol" className="news-volanta">{n.vol}</Part>
+        <Part type="titulo" k="tit" as="h3" className="news-titulo">{n.tit}</Part>
+        <Part type="copete" k="cop" className="news-copete">{n.cop}</Part>
+        <div className="news-body">
+          <figure className="news-fig">
+            <Part type="imagen" k="img" className="news-img">{n.pic}</Part>
+            <Part type="epigrafe" k="epi" as="figcaption" className="news-epi">{n.epi}</Part>
+          </figure>
+          <Part type="cuerpo" k="cue" className="news-cuerpo">
+            {n.cuerpo.map((p, j) => <p key={j}>{p}</p>)}
+          </Part>
+        </div>
+      </article>
+    );
+  }
+
+  /** Noticia corta, para el Detective de noticias. */
+  function NewsBrief({ n }) {
+    return (
+      <div className="news news-brief">
+        <p className="news-volanta">{n.vol}</p>
+        <h3 className="news-titulo">{n.tit}</h3>
+        <div className="flex gap-3 items-start mt-2">
+          <div className="news-img news-img-sm" aria-hidden="true">{n.pic}</div>
+          <div className="news-cuerpo flex-1">{n.cuerpo.map((p, j) => <p key={j}>{p}</p>)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  function Aviso({ a, showTipo }) {
+    const seen = {};
+    return (
+      <div className={'aviso aviso-' + a.color}>
+        {showTipo && (
+          <span className={'aviso-tipo ' + a.tipo}>
+            {a.tipo === 'publicidad' ? 'Publicidad · quiere vender' : 'Propaganda · quiere convencer'}
+          </span>
+        )}
+        <div className="aviso-pic" aria-hidden="true">{a.pic}</div>
+        <h4 className="aviso-tit"><Rich text={a.titulo} k="t" seen={seen} /></h4>
+        <p className="aviso-txt"><Rich text={a.texto} k="x" seen={seen} /></p>
+        <Part type="marca" k="marca" className="aviso-marca">{a.marca}</Part>
+      </div>
+    );
+  }
+
+  const KIND = {
+    historieta: { n: 'Historieta', icon: 'fa-comment-dots' },
+    noticia:    { n: 'Noticia',    icon: 'fa-newspaper' },
+    aviso:      { n: 'Aviso',      icon: 'fa-bullhorn' }
+  };
+
+  /* ==================================================================
+     6b3 · LENGUA · ENCONTRÁ LAS PARTES
+     Cada ronda es un ejemplo dibujado. Paso "tap": hay que tocar la
+     parte pedida. Paso con opciones: se elige la respuesta.
+     ================================================================== */
+  function PartsGame({ title, onFinish, onExit }) {
+    const S = useSubject();
+    const [rounds] = useState(() => S.PARTES.build().map((r) => ({
+      ...r,
+      steps: r.steps.map((st) => (st.opts && st.mix ? { ...st, opts: APP.shuffle(st.opts) } : st))
+    })));
+    const TOTAL = rounds.reduce((a, r) => a + r.steps.length, 0);
+
+    const [ri, setRi]       = useState(0);
+    const [si, setSi]       = useState(0);
+    const [ans, setAns]     = useState(null);   // { ok, chosen, k }
+    const [score, setScore] = useState(0);
+    const [correct, setCorrect] = useState(0);
+    const [streak, setStreak] = useState(0);
+    const [results, setResults] = useState([]);
+    const [done, setDone]   = useState(false);
+
+    const r = rounds[ri];
+    const st = r.steps[si];
+    const doneSoFar = rounds.slice(0, ri).reduce((a, x) => a + x.steps.length, 0) + si;
+    const lastStep = si + 1 >= r.steps.length;
+    const lastRound = ri + 1 >= rounds.length;
+
+    function resolve(ok, ev, extra) {
+      if (ans) return;
+      if (ok) {
+        const pts = 100 + Math.min(streak * 20, 100);
+        setScore((s) => s + pts);
+        setCorrect((n) => n + 1);
+        setStreak((s) => s + 1);
+        fx.good({ x: ev.clientX, y: ev.clientY }, pts);
+      } else {
+        setStreak(0);
+        fx.bad();
+      }
+      setResults((x) => x.concat(ok));
+      setAns(Object.assign({ ok: ok }, extra));
+    }
+
+    function next() {
+      setAns(null);
+      if (!lastStep) { setSi(si + 1); return; }
+      if (lastRound) { setDone(true); return; }
+      setRi(ri + 1); setSi(0); setResults([]);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    if (done) {
+      return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
+        extra={<p className="text-sm text-slate-500">Revisaste <b className="text-indigo-600">{rounds.length}</b> ejemplos 🔎</p>}
+        onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
+        onExit={() => onFinish({ score, correct, total: TOTAL })} />;
+    }
+
+    const ctx = {
+      onTap: st.tap && !ans ? (type, k, ev) => resolve(type === st.tap, ev, { k: k }) : null,
+      reveal: ans && st.tap ? st.tap : null,
+      bad: ans && !ans.ok ? ans.k : null
+    };
+    const why = st.tap && ans && !ans.ok
+      ? 'Esa parte no era. Mirá la que quedó marcada en verde. ' + st.why
+      : st.why;
+
+    return (
+      <div className="no-touch-zoom pb-56">
+        <GameHeader
+          title={title}
+          subtitle={'Ejemplo ' + (ri + 1) + ' de ' + rounds.length + ' · ' + KIND[r.kind].n}
+          onExit={onExit}
+          progress={{ v: doneSoFar, m: TOTAL }}
+          right={
+            <div className="text-right">
+              <p className="font-black text-indigo-600 leading-none">{score}</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400">puntos</p>
+            </div>
+          } />
+
+        <div className="card p-4 sm:p-6 mb-4 anim-fadeup" key={ri + '-' + si}>
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <Chip icon={KIND[r.kind].icon}>{KIND[r.kind].n}</Chip>
+            <div className="flex items-center gap-1.5">
+              {streak >= 2 && <span className="chip !bg-amber-50 !text-amber-600 !border-amber-200">🔥 {streak}</span>}
+              {r.steps.map((x, k) => (
+                <span key={k} className={'w-2.5 h-2.5 rounded-full ' +
+                  (k < results.length ? (results[k] ? 'bg-emerald-500' : 'bg-rose-400') : k === si ? 'bg-indigo-500' : 'bg-slate-200')} />
+              ))}
+            </div>
+          </div>
+          <h3 className="text-lg sm:text-2xl font-black leading-snug">
+            {st.tap && <i className="fa-solid fa-hand-pointer text-orange-500 mr-2" />}
+            {st.q}
+          </h3>
+          {st.tap && !ans && <p className="text-xs font-bold text-slate-400 mt-1">Tocala en el dibujo de abajo 👇</p>}
+
+          {st.opts && (
+            <div className={'grid gap-2.5 mt-4 stagger ' + (st.opts.length === 2 ? 'sm:grid-cols-2' : '')}>
+              {st.opts.map((o, k) => {
+                let cls = 'option';
+                if (ans) cls += o === st.ok ? ' is-ok' : o === ans.chosen ? ' is-bad' : ' is-dim';
+                return (
+                  <button key={o} data-sfx="none" className={cls} disabled={!!ans}
+                          onClick={(e) => resolve(o === st.ok, e, { chosen: o })}>
+                    <span className="badge">{'ABCD'[k]}</span>
+                    <span className="flex-1">{o}</span>
+                    {ans && o === st.ok && <i className="fa-solid fa-circle-check text-emerald-600" />}
+                    {ans && o === ans.chosen && o !== st.ok && <i className="fa-solid fa-circle-xmark text-rose-500" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
+        <div className="card p-3 sm:p-6">
+          <PartCtx.Provider value={ctx}>
+            {r.kind === 'historieta' ? <Historieta h={r.ex} />
+              : r.kind === 'noticia' ? <Noticia n={r.ex} />
+              : <div className="max-w-md mx-auto"><Aviso a={r.ex} /></div>}
+          </PartCtx.Provider>
+        </div>
+
+        {ans && (
+          <div className="answer-bar">
+            <div className="max-w-app mx-auto px-4">
+              <Explain ok={ans.ok} why={why}>
+                <button className="btn btn-primary mt-3 w-full sm:w-auto" onClick={next}>
+                  {lastStep && lastRound ? 'Ver resultado' : lastStep ? 'Siguiente ejemplo' : 'Siguiente'} <i className="fa-solid fa-arrow-right" />
+                </button>
+              </Explain>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     6b4 · LENGUA · EJEMPLOS CON SUS PARTES (sólo para mirar)
+     ================================================================== */
+  function Legend({ types }) {
+    const S = useSubject();
+    return (
+      <div className="grid gap-2 sm:grid-cols-2 mt-4">
+        {types.map((t) => {
+          const info = S.PART_INFO[t];
+          return (
+            <div key={t} className="flex items-start gap-2.5 rounded-2xl bg-slate-50 p-3">
+              <span className="legend-dot" style={{ background: info.c }} />
+              <p className="text-sm leading-snug"><b style={{ color: info.c }}>{info.n}:</b> <span className="text-slate-600">{info.d}</span></p>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function Pager({ i, n, setI }) {
+    return (
+      <div className="flex items-center justify-center gap-3 mt-4">
+        <button className="btn btn-ghost !px-3 !py-2" disabled={i === 0} onClick={() => setI(i - 1)} aria-label="Anterior">
+          <i className="fa-solid fa-chevron-left" />
+        </button>
+        <span className="font-black text-slate-500 text-sm">Ejemplo {i + 1} de {n}</span>
+        <button className="btn btn-ghost !px-3 !py-2" disabled={i + 1 >= n} onClick={() => setI(i + 1)} aria-label="Siguiente">
+          <i className="fa-solid fa-chevron-right" />
+        </button>
+      </div>
+    );
+  }
+
+  /** Palabra partida en sílabas, con la que suena fuerte resaltada. */
+  function SilWord({ x }) {
+    return (
+      <span className="sil-word">
+        {x.sil.map((s, k) => (
+          <React.Fragment key={k}>
+            {k > 0 && <span className="text-slate-300">-</span>}
+            <span className={k === x.f ? 'sil-strong' : ''}>{s}</span>
+          </React.Fragment>
+        ))}
+      </span>
+    );
+  }
+
+  function TildesEjemplos() {
+    const T = useSubject().EJEMPLOS.TILDES;
+    const groups = [
+      { pos: 0, n: 'Agudas', c: '#0284c7', where: 'Suenan fuerte AL FINAL (última sílaba).', rule: 'Llevan tilde si terminan en N, S o vocal.' },
+      { pos: 1, n: 'Graves', c: '#059669', where: 'Suenan fuerte EN EL MEDIO (anteúltima sílaba).', rule: 'Es al revés: llevan tilde si NO terminan en N, S o vocal.' },
+      { pos: 2, n: 'Esdrújulas', c: '#d97706', where: 'Suenan fuerte 3 sílabas antes del final (antepenúltima).', rule: '¡SIEMPRE llevan tilde!' }
+    ];
+    const row = (list, label, ok) => list.length > 0 && (
+      <div className="mt-3">
+        <p className={'text-xs font-black uppercase tracking-wide ' + (ok ? 'text-emerald-600' : 'text-slate-400')}>
+          <i className={'fa-solid ' + (ok ? 'fa-check' : 'fa-xmark') + ' mr-1'} />{label}
+        </p>
+        <div className="flex flex-wrap gap-2 mt-1.5">
+          {list.slice(0, 8).map((x) => (
+            <span key={x.w} className="rounded-xl bg-white border border-slate-200 px-2.5 py-1.5 text-sm">
+              <SilWord x={x} /> <span className="text-[11px] text-slate-400 font-bold">· termina en {x.fin}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    );
+    return (
+      <div className="grid gap-4">
+        <div className="card p-4 sm:p-5 bg-amber-50/70 border-amber-200">
+          <p className="font-black text-amber-700"><i className="fa-solid fa-lightbulb mr-1" /> El truco en 2 pasos</p>
+          <p className="text-sm text-slate-600 mt-1"><b>Paso 1:</b> partí la palabra en sílabas, decila en voz alta y aplaudí: ¿dónde suena MÁS FUERTE? (acá está en <span className="sil-strong">color</span>).</p>
+          <p className="text-sm text-slate-600 mt-1"><b>Paso 2:</b> fijate en qué termina la palabra.</p>
+        </div>
+        {groups.map((g) => {
+          const all = T.filter((x) => x.pos === g.pos);
+          return (
+            <div key={g.n} className="card p-4 sm:p-5" style={{ borderTop: '5px solid ' + g.c }}>
+              <h4 className="font-black text-xl" style={{ color: g.c }}>{g.n}</h4>
+              <p className="text-sm font-bold text-slate-600">{g.where}</p>
+              <p className="text-sm font-black text-slate-700 mt-0.5">{g.rule}</p>
+              {g.pos === 2
+                ? row(all, 'Siempre con tilde', true)
+                : <>
+                    {row(all.filter((x) => x.tilde), 'Con tilde', true)}
+                    {row(all.filter((x) => !x.tilde), 'Sin tilde', false)}
+                  </>}
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
+  function EjemplosView({ onExit }) {
+    const S = useSubject();
+    const E = S.EJEMPLOS;
+    const TABS = [
+      { id: 'historieta', n: 'Historietas', icon: 'fa-comment-dots' },
+      { id: 'noticia',    n: 'Noticias',    icon: 'fa-newspaper' },
+      { id: 'aviso',      n: 'Publicidad y propaganda', icon: 'fa-bullhorn' },
+      { id: 'tilde',      n: 'Tildes',      icon: 'fa-pen-nib' }
+    ];
+    const [tab, setTab] = useState('historieta');
+    const [idx, setIdx] = useState(0);
+    const [labels, setLabels] = useState(true);
+    const pick = (id) => { setTab(id); setIdx(0); };
+
+    const h = E.HISTORIETAS[Math.min(idx, E.HISTORIETAS.length - 1)];
+    const n = E.NOTICIAS[Math.min(idx, E.NOTICIAS.length - 1)];
+    const metas = tab === 'historieta'
+      ? Array.from(new Set([].concat.apply([], h.vinetas.map((v) => (v.pjs || []).map((p) => p.meta).filter(Boolean)))))
+      : [];
+
+    const toggle = tab !== 'tilde' && (
+      <button className="btn btn-ghost !py-2 !px-3 text-sm" onClick={() => setLabels(!labels)}>
+        <i className={'fa-solid ' + (labels ? 'fa-eye-slash' : 'fa-eye')} />
+        {labels ? 'Ocultar nombres' : 'Mostrar nombres'}
+      </button>
+    );
+
+    return (
+      <div>
+        <GameHeader title="Ejemplos con sus partes" subtitle="Mirá cada parte marcada con su nombre" onExit={onExit} />
+
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
+          {TABS.map((t) => (
+            <button key={t.id} data-sfx="open"
+                    className={'btn !py-2 !px-3.5 text-sm whitespace-nowrap ' + (tab === t.id ? 'btn-primary' : 'btn-ghost')}
+                    onClick={() => pick(t.id)}>
+              <i className={'fa-solid ' + t.icon} /> {t.n}
+            </button>
+          ))}
+        </div>
+
+        {tab !== 'tilde' && (
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <p className="text-sm text-slate-500 flex-1 min-w-[12rem]">
+              {labels ? 'Cada parte tiene un borde de color y su nombre. ' : 'Nombres ocultos: ¿te acordás cómo se llama cada parte? '}
+              {tab === 'aviso' ? 'Fijate en la palabra pista.' : ''}
+            </p>
+            {toggle}
+          </div>
+        )}
+
+        <PartCtx.Provider value={{ labels: labels }}>
+          {tab === 'historieta' && (
+            <div className="card p-3 sm:p-6 anim-fadeup" key={'h' + idx}>
+              <Historieta h={h} />
+              <Pager i={idx} n={E.HISTORIETAS.length} setI={setIdx} />
+            </div>
+          )}
+
+          {tab === 'noticia' && (
+            <div className="card p-3 sm:p-6 anim-fadeup" key={'n' + idx}>
+              <Noticia n={n} />
+              <Pager i={idx} n={E.NOTICIAS.length} setI={setIdx} />
+            </div>
+          )}
+
+          {tab === 'aviso' && (
+            <div className="grid gap-4 anim-fadeup">
+              {[['publicidad', 'Publicidad: quiere VENDER algo', 'Dice COMPRÁ / VENTA y usa palabras lindas para convencerte.'],
+                ['propaganda', 'Propaganda: quiere CONVENCER de una idea', 'Dice CUIDÁ / AYUDÁ / NO TIRES. No te pide que compres: te pide que cambies tu conducta.']]
+                .map(([tipo, t, d]) => (
+                  <div key={tipo} className="card p-4 sm:p-6">
+                    <h4 className={'font-black text-lg ' + (tipo === 'publicidad' ? 'text-amber-600' : 'text-emerald-600')}>{t}</h4>
+                    <p className="text-sm text-slate-500 mb-5">{d}</p>
+                    <div className="grid gap-6 sm:grid-cols-3">
+                      {E.AVISOS.filter((a) => a.tipo === tipo).map((a) => <Aviso key={a.id} a={a} showTipo={labels} />)}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          )}
+        </PartCtx.Provider>
+
+        {tab === 'tilde' && <TildesEjemplos />}
+
+        {tab !== 'tilde' && (
+          <div className="card p-4 sm:p-5 mt-4">
+            <h4 className="font-black text-indigo-600"><i className="fa-solid fa-list-check mr-2" />Las partes</h4>
+            <Legend types={{ historieta: ['cartel', 'globo', 'ono', 'meta'],
+                             noticia: ['volanta', 'titulo', 'copete', 'cuerpo', 'imagen', 'epigrafe'],
+                             aviso: ['pista', 'lindas', 'marca'] }[tab]} />
+            {metas.length > 0 && (
+              <div className="mt-3 rounded-2xl bg-purple-50 border border-purple-100 p-3 text-sm">
+                <b className="text-purple-700">Metáforas visuales de esta historieta: </b>
+                {metas.map((m, k) => <span key={m} className="text-slate-600">{k > 0 ? ' · ' : ''}<b>{m}</b> = {E.METAS[m].toLowerCase()}</span>)}
+              </div>
+            )}
+            {tab === 'historieta' && (
+              <p className="text-sm text-slate-500 mt-3">
+                <b>¿Y el cuento?</b> La historieta se parece al cuento (tiene historia, personajes y aventura), pero usa dibujos, globos,
+                onomatopeyas y menos palabras: con el dibujo ya se ve lo que pasa.
+              </p>
+            )}
+            {tab === 'noticia' && (
+              <p className="text-sm text-slate-500 mt-3">
+                <b>Preguntas que responde:</b> ¿QUÉ sucedió? ¿QUIÉNES participan? ¿CUÁNDO? ¿DÓNDE? ¿CUÁL FUE EL PROPÓSITO?
+                Las respuestas están en el cuerpo. La noticia cuenta un hecho <b>real</b>: no es inventada.
+              </p>
+            )}
+          </div>
+        )}
       </div>
     );
   }
@@ -2116,7 +2602,7 @@
      8 · MENÚ PRINCIPAL
      ================================================================== */
   /** Juegos que dan estrellas (las Flashcards y el Resumen no). */
-  const isScored = (g) => g.type !== 'resumen' && g.type !== 'cards';
+  const isScored = (g) => g.type !== 'resumen' && g.type !== 'cards' && g.type !== 'ejemplos';
 
   /** Estrellas ganadas en una materia: { total, max }. */
   function starsOf(S, progress) {
@@ -2193,7 +2679,7 @@
                 <h3 className="font-black text-lg leading-tight">{g.name}</h3>
                 <p className="text-sm text-slate-500 mt-1 flex-1">{g.desc}</p>
                 <div className="flex items-center justify-between mt-4">
-                  {g.type === 'resumen'
+                  {g.type === 'resumen' || g.type === 'ejemplos'
                     ? <span className="text-xs font-bold text-slate-400">Sin puntaje · sólo leer</span>
                     : g.type === 'cards'
                       ? <span className="text-xs font-bold text-amber-600">{knownCount}/{S.FLASHCARDS.length} ya las sé</span>
@@ -2420,7 +2906,9 @@
     else if (game.type === 'match')    content = <MatchGame key={nonce} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'cards')    content = <Flashcards onExit={back} onXp={addXp} />;
     else if (game.type === 'classify') content = <ClassifyGame key={game.id + nonce} kind={game.id} onExit={back} onFinish={(r) => finish(game.id, r)} />;
-    else if (game.type === 'detective') content = <DetectiveGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'detective') content = <DetectiveGame key={game.id + nonce} kind={game.id} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'partes')   content = <PartsGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'ejemplos') content = <EjemplosView onExit={back} />;
     else if (game.type === 'resumen')  content = <Resumen onExit={back} />;
     else if (game.type === 'quiz')     content = <QuizGame key={game.id + nonce} kind={game.id} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'speaking') content = <SpeakingGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;

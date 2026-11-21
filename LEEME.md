@@ -6,10 +6,10 @@ App web de una sola página para repasar tres materias:
   sale del resumen `pueblos_originarios_de_santa_fe.md` y de la fotocopia
   `recursos-naturales.jpg` (al arcade de recursos se le sumaron ejemplos de
   cosas hechas por el hombre: auto, casa, lápiz…).
-- **Lengua** · textos humorísticos, verbos, sustantivos, género y número, y
-  adjetivos. El contenido sale de `apuntes_de_lengua.md`; para que los juegos
-  tengan material se sumaron algunos ejemplos más de los mismos conceptos
-  (otros verbos conjugados, sustantivos abstractos/concretos y adjetivos).
+- **Lengua** · publicidad y propaganda, la historieta, la noticia y las reglas
+  de tilde (agudas, graves y esdrújulas). El contenido sale de las fotocopias de
+  clase; las historietas, noticias y avisos de ejemplo están inventados para
+  practicar (la Juguetería Capiplasan sale de la fotocopia).
 - **Inglés** · examen final de Learning Lands 2, con foco en el Speaking
   (question words, "Tell me about…", prepositions). Ver la sección *Inglés* más abajo.
 
@@ -46,27 +46,21 @@ npx serve .
 | 🥾 **¿Nómade o sedentario?** | Mismo arcade, con dos baldes: Nómades / Sedentarios. |
 | 🍃 **¿Es un recurso natural?** | Mismo arcade: Recurso natural / Lo hizo el hombre. |
 
-En **Lengua** están la Trivia (49 preguntas), Unir con flechas (8 rondas),
-Flashcards (25), **Pasado, presente y futuro** (ordenar la misma oración en los
-tres tiempos) y tres arcades: **Cazador de adjetivos** (calificativo /
-gentilicio / numeral / ordinal), **¿Abstracto o concreto?** y **¿Pasado,
-presente o futuro?**.
+En **Lengua**:
 
-🔎 **Detective de palabras** (Lengua): aparece una oración con una palabra
-marcada. Primero hay que decir si es sustantivo, verbo o adjetivo, y después
-contestar dos pistas más sobre esa palabra:
+| Juego | Qué practica |
+|---|---|
+| 🧩 **Ejemplos con sus partes** | Historietas, noticias y avisos dibujados en la app, con cada parte marcada con su nombre (cartelera, globo, onomatopeya, metáfora visual · volanta, título, copete, cuerpo, imagen, epígrafe · palabra pista y palabras lindas). Se pueden ocultar los nombres para repasar. Tiene también una pestaña de tildes con las palabras partidas en sílabas. Sin puntaje. |
+| 👆 **Encontrá las partes** | 5 ejemplos (2 historietas, 1 noticia, 1 publicidad y 1 propaganda): "Tocá la cartelera", "Tocá el epígrafe", "¿Qué significa 💡?", "¿Publicidad o propaganda?"… |
+| 🔎 **Detective de tildes** | Paso 1: ¿qué sílaba suena más fuerte? · ¿aguda, grave o esdrújula? · Paso 2: ¿en qué termina? · ¿cómo se escribe? |
+| 📰 **Detective de noticias** | Leer una noticia corta y contestar ¿qué?, ¿quiénes?, ¿cuándo?, ¿dónde?, ¿para qué? |
+| 🧠 Trivia · 🔗 Unir con flechas · 🃏 Flashcards | 59 preguntas, 10 rondas y 23 tarjetas de los cuatro temas. |
+| ⚡ Arcades | **¿Publicidad o propaganda?**, **¿Cartelera, globo u onomatopeya?**, **¿Aguda, grave o esdrújula?** y **¿Lleva tilde?** |
 
-- **Sustantivo:** común o propio, abstracto o concreto, individual o colectivo,
-  contable o no contable, género y número.
-- **Verbo:** tiempo verbal (pasado, presente o futuro) y su raíz, su desinencia
-  o cómo se separa en raíz | desinencia.
-- **Adjetivo:** tipo (calificativo, gentilicio, numeral u ordinal) y a qué
-  sustantivo acompaña.
-
-Cada partida tiene 6 palabras (2 de cada clase) elegidas al azar de un banco de
-81 oraciones, o sea 18 preguntas. Las preguntas se arman solas en `lengua.js`
-(sección *Detective de palabras*): para sumar ejemplos alcanza con agregar una
-línea a `D_SUSTANTIVOS`, `D_VERBOS` o `D_ADJETIVOS`.
+Las palabras de tildes están en `PALABRAS` dentro de `lengua.js` (palabra,
+sílabas y cuál suena fuerte): la clase y si lleva tilde se calculan solas. Las
+historietas, noticias y avisos están en `HISTORIETAS`, `NOTICIAS` y `AVISOS`.
+El progreso de Lengua arrancó de cero con los temas nuevos (`estudioSanti.lengua.v2`).
 
 En las dos materias hay un **Resumen para leer** con la ficha de datos, el texto por secciones
 y el cuadro de los tres pueblos.
