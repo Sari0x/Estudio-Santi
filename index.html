@@ -55,6 +55,7 @@
 
   <!-- Utilidades + materias (Sociales en app.js, Lengua en lengua.js, Inglés en ingles.js) -->
   <script src="app.js"></script>
+  <script src="sociales.js"></script>
   <script src="lengua.js"></script>
   <script src="ingles.js"></script>
 
@@ -1232,7 +1233,7 @@
      ================================================================== */
   const PartCtx = React.createContext({});
 
-  function Part({ type, k, as, className, noTag, children }) {
+  function Part({ type, k, as, className, noTag, style, children }) {
     const ctx = useContext(PartCtx);
     const info = useSubject().PART_INFO[type] || {};
     const Tag = as || 'div';
@@ -1246,7 +1247,7 @@
     if (ctx.reveal === type) cls += ' part-ok';
     if (ctx.bad != null && ctx.bad === k) cls += ' part-bad';
     return (
-      <Tag className={cls} style={{ '--pc': info.c }}
+      <Tag className={cls} data-part={type} style={Object.assign({ '--pc': info.c }, style)}
            onClick={ctx.onTap ? (e) => { e.stopPropagation(); ctx.onTap(type, k, e); } : undefined}>
         {children}
         {(ctx.labels || q) && !noTag && <span className={'part-tag' + (empty ? ' is-empty' : '')}>{empty ? '?' : info.n}</span>}
@@ -1358,8 +1359,297 @@
   const KIND = {
     historieta: { n: 'Historieta', icon: 'fa-comment-dots' },
     noticia:    { n: 'Noticia',    icon: 'fa-newspaper' },
-    aviso:      { n: 'Aviso',      icon: 'fa-bullhorn' }
+    aviso:      { n: 'Aviso',      icon: 'fa-bullhorn' },
+    mando:      { n: '¿Quién mandaba?', icon: 'fa-crown' },
+    piramide:   { n: 'Pirámide social', icon: 'fa-layer-group' },
+    plano:      { n: 'Plano de la ciudad', icon: 'fa-chess-board' },
+    circuito:   { n: 'Circuito comercial', icon: 'fa-route' },
+    reduccion:  { n: 'Reducción', icon: 'fa-church' }
   };
+
+  /* ==================================================================
+     6b2a · SOCIALES · INFOGRAFÍAS DIBUJADAS
+     ¿Quién mandaba?, pirámide social, plano de la ciudad, circuito
+     comercial y reducción. Cada parte es un <Part>, igual que en Lengua:
+     sirven para mirar, para "Poné los nombres" y para "Encontrá".
+     Las descripciones (que darían la respuesta) sólo se ven con labels.
+     ================================================================== */
+  function Mando({ ex }) {
+    const ctx = useContext(PartCtx);
+    return (
+      <div className="info-draw">
+        <p className="info-title">{ex.titulo}</p>
+        <div className="mando">
+          {ex.niveles.map((nv, i) => (
+            <React.Fragment key={nv.t}>
+              {i > 0 && <div className="mando-arrow" aria-hidden="true"><i className="fa-solid fa-arrow-down" /></div>}
+              <Part type={nv.t} k={nv.t} className="mando-box">
+                <span className="mando-emoji">{nv.e}</span>
+                {ctx.labels && <span className="mando-d">{nv.d}</span>}
+              </Part>
+            </React.Fragment>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  function Piramide({ ex }) {
+    const ctx = useContext(PartCtx);
+    const n = ex.niveles.length;
+    return (
+      <div className="info-draw">
+        <p className="info-title">{ex.titulo}</p>
+        <div className="piramide">
+          <span className="piramide-side top">Privilegiados ▲</span>
+          {ex.niveles.map((nv, i) => (
+            <Part key={nv.t} type={nv.t} k={nv.t} className="piramide-row"
+                  noTag={false}>
+              <div className="piramide-fill" style={{ width: (34 + (66 * i) / (n - 1)) + '%' }}>
+                <span className="piramide-emoji">{nv.e}</span>
+                {ctx.labels && <span className="piramide-d">{nv.d}</span>}
+              </div>
+            </Part>
+          ))}
+          <span className="piramide-side bottom">▼ No privilegiados</span>
+        </div>
+      </div>
+    );
+  }
+
+  function Plano({ ex }) {
+    const E = useSubject().EJEMPLOS.PLANO_EMOJI;
+    const seen = {};
+    return (
+      <div className="info-draw">
+        <p className="info-title">{ex.titulo}</p>
+        <div className="plano">
+          <div className="plano-grid">
+            {ex.filas.map((fila, i) => fila.map((t, j) => {
+              if (!t) return <div key={i + '-' + j} className="plano-cell plano-vacia" />;
+              const first = !seen[t];
+              seen[t] = true;
+              return (
+                <Part key={i + '-' + j} type={t} k={i + '-' + j} noTag={!first} className={'plano-cell plano-' + t}>
+                  <span>{E[t]}</span>
+                </Part>
+              );
+            }))}
+          </div>
+          <Part type="rio" k="rio" className="plano-rio"><span>🌊</span><span>🚣</span><span>🌊</span></Part>
+        </div>
+        <p className="info-foot">Calles en cuadrícula, como un tablero de ajedrez ♟️</p>
+      </div>
+    );
+  }
+
+  function Circuito({ ex }) {
+    const pos = {};
+    ex.nodos.forEach((nd) => { pos[nd.t] = nd; });
+    const line = (a, b) => <line key={a + b} x1={pos[a].x} y1={pos[a].y} x2={pos[b].x} y2={pos[b].y} className="circ-route" />;
+    return (
+      <div className="info-draw">
+        <p className="info-title">{ex.titulo}</p>
+        <div className="circ-map">
+          <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="circ-svg" aria-hidden="true">
+            <path d="M 84 14 C 78 30, 66 38, 62 50 S 66 74, 82 90" className="circ-river" />
+            {line('potosi', 'tucuman')}{line('tucuman', 'cordoba')}{line('cordoba', 'santafe')}
+            {line('santafe', 'buenosaires')}{line('paraguay', 'santafe')}
+          </svg>
+          <Part type="parana" k="parana" className="circ-parana" >⛵</Part>
+          {ex.nodos.map((nd) => (
+            <Part key={nd.t} type={nd.t} k={nd.t} className={'circ-node' + (nd.t === 'santafe' ? ' is-main' : '')}
+                  style={{ left: nd.x + '%', top: nd.y + '%' }}>
+              {nd.e}
+            </Part>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-3 mt-7">
+          <Part type="llegaban" k="llegaban" className="circ-list llegan">
+            <p className="circ-list-h">➡️ ⭐</p>
+            {ex.llegan.map((x) => <p key={x}>{x}</p>)}
+          </Part>
+          <Part type="salian" k="salian" className="circ-list salen">
+            <p className="circ-list-h">⭐ ➡️</p>
+            {ex.salen.map((x) => <p key={x}>{x}</p>)}
+          </Part>
+        </div>
+      </div>
+    );
+  }
+
+  function Reduccion({ ex }) {
+    const casa = (k, first) => <Part key={k} type="r_casas" k={k} noTag={!first} className="red-casa">🏠</Part>;
+    return (
+      <div className="info-draw">
+        <p className="info-title">{ex.titulo}</p>
+        <div className="reduccion">
+          <div className="red-top">
+            {casa('c1', false)}
+            <Part type="r_iglesia" k="igl" className="red-iglesia"><span className="text-xl">✝️</span><span>⛪</span></Part>
+            {casa('c2', false)}
+          </div>
+          <div className="red-mid">
+            <div className="red-col">{casa('c3', false)}{casa('c4', false)}</div>
+            <Part type="r_plaza" k="plaza" className="red-plaza">🌳 ⛲ 🌳</Part>
+            <div className="red-col">{casa('c5', false)}{casa('c6', false)}</div>
+          </div>
+          <div className="red-bottom">{casa('c7', false)}{casa('c8', true)}{casa('c9', false)}</div>
+        </div>
+      </div>
+    );
+  }
+
+  /** Dibuja cualquier ejemplo (de Lengua o de Sociales) según su tipo. */
+  function ExDraw({ r }) {
+    switch (r.kind) {
+      case 'historieta': return <Historieta h={r.ex} />;
+      case 'noticia':    return <Noticia n={r.ex} />;
+      case 'aviso':      return <div className="max-w-md mx-auto"><Aviso a={r.ex} /></div>;
+      case 'mando':      return <Mando ex={r.ex} />;
+      case 'piramide':   return <Piramide ex={r.ex} />;
+      case 'plano':      return <Plano ex={r.ex} />;
+      case 'circuito':   return <Circuito ex={r.ex} />;
+      case 'reduccion':  return <Reduccion ex={r.ex} />;
+      default:           return null;
+    }
+  }
+
+  /** Infografías para mirar, con los nombres de cada parte (Sociales). */
+  function InfografiasView({ onExit }) {
+    const S = useSubject();
+    const L = S.INFOGRAFIAS;
+    const [i, setI] = useState(0);
+    const [labels, setLabels] = useState(true);
+    const it = L[i];
+    return (
+      <div>
+        <GameHeader title="Infografías con sus partes" subtitle="Mirá cada parte marcada con su nombre" onExit={onExit} />
+        <div className="flex gap-2 overflow-x-auto pb-2 mb-3 -mx-1 px-1">
+          {L.map((x, k) => (
+            <button key={x.id} data-sfx="open"
+                    className={'btn !py-2 !px-3.5 text-sm whitespace-nowrap ' + (k === i ? 'btn-primary' : 'btn-ghost')}
+                    onClick={() => setI(k)}>
+              <i className={'fa-solid ' + x.icon} /> {x.n}
+            </button>
+          ))}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+          <p className="text-sm text-slate-500 flex-1 min-w-[12rem]">
+            {labels ? 'Cada parte tiene un borde de color y su nombre.' : 'Nombres ocultos: ¿te acordás cómo se llama cada parte?'}
+          </p>
+          <button className="btn btn-ghost !py-2 !px-3 text-sm" onClick={() => setLabels(!labels)}>
+            <i className={'fa-solid ' + (labels ? 'fa-eye-slash' : 'fa-eye')} />
+            {labels ? 'Ocultar nombres' : 'Mostrar nombres'}
+          </button>
+        </div>
+        <div className="card p-3 sm:p-6 anim-fadeup" key={it.id}>
+          <PartCtx.Provider value={{ labels: labels }}>
+            <ExDraw r={it} />
+          </PartCtx.Provider>
+          <p className="text-sm font-bold text-slate-600 mt-5 rounded-2xl bg-amber-50 border border-amber-200 p-3">
+            <i className="fa-solid fa-lightbulb text-amber-500 mr-1" /> {it.note}
+          </p>
+          {labels && <Legend types={it.legend} />}
+          <div className="flex items-center justify-center gap-3 mt-4">
+            <button className="btn btn-ghost !px-3 !py-2" disabled={i === 0} onClick={() => setI(i - 1)} aria-label="Anterior">
+              <i className="fa-solid fa-chevron-left" />
+            </button>
+            <span className="font-black text-slate-500 text-sm">{i + 1} de {L.length}</span>
+            <button className="btn btn-ghost !px-3 !py-2" disabled={i + 1 >= L.length} onClick={() => setI(i + 1)} aria-label="Siguiente">
+              <i className="fa-solid fa-chevron-right" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ==================================================================
+     6b2c · SOCIALES · DECILO CON TUS PALABRAS
+     Como en la prueba oral: Santi contesta en voz alta, mira la
+     respuesta y marca qué palabras clave dijo.
+     ================================================================== */
+  function ExplicarGame({ title, onFinish, onExit }) {
+    const S = useSubject();
+    const [list] = useState(() => S.EXPLICAR.map((x) => {
+      const keys = (x.a.match(/\[\[(.*?)\]\]/g) || []).map((m) => m.slice(2, -2));
+      return { ...x, keys: keys };
+    }));
+    const TOTAL = list.reduce((a, x) => a + x.keys.length, 0);
+    const [i, setI]         = useState(0);
+    const [shown, setShown] = useState(false);
+    const [said, setSaid]   = useState({});
+    const [score, setScore] = useState(0);
+    const [correct, setCorrect] = useState(0);
+    const [done, setDone]   = useState(false);
+    const x = list[i];
+    const last = i + 1 >= list.length;
+    const nSaid = x.keys.filter((k) => said[k]).length;
+
+    function toggle(k) { APP.sfx.play('pick'); setSaid(Object.assign({}, said, { [k]: !said[k] })); }
+    function next(ev) {
+      const pts = nSaid * 25 + (nSaid === x.keys.length ? 50 : 0);
+      setScore((s) => s + pts);
+      setCorrect((c) => c + nSaid);
+      if (nSaid > 0) fx.good({ x: ev.clientX, y: ev.clientY }, pts);
+      if (last) { setDone(true); return; }
+      setI(i + 1); setShown(false); setSaid({});
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    if (done) {
+      return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
+        extra={<p className="text-sm text-slate-500">Dijiste <b className="text-indigo-600">{correct}</b> de {TOTAL} palabras clave 🗣️</p>}
+        onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
+        onExit={() => onFinish({ score, correct, total: TOTAL })} />;
+    }
+
+    return (
+      <div className="pb-10">
+        <GameHeader title={title} subtitle={'Pregunta ' + (i + 1) + ' de ' + list.length + ' · ' + x.tag}
+          onExit={onExit} progress={{ v: i, m: list.length }}
+          right={<div className="text-right"><p className="font-black text-indigo-600 leading-none">{score}</p><p className="text-[10px] uppercase font-bold text-slate-400">puntos</p></div>} />
+
+        <div className="card p-4 sm:p-6 anim-fadeup" key={i}>
+          <Chip icon="fa-comment-dots">{x.tag}</Chip>
+          <h3 className="text-xl sm:text-2xl font-black leading-snug mt-3">{x.q}</h3>
+          {!shown ? (
+            <>
+              <p className="text-sm text-slate-500 mt-3">
+                🎤 Contestá <b>en voz alta</b>, como si estuvieras en la prueba. Cuando termines, tocá el botón.
+              </p>
+              <button className="btn btn-primary mt-4 w-full sm:w-auto" onClick={() => { APP.sfx.play('flip'); setShown(true); }}>
+                <i className="fa-solid fa-eye" /> Ver lo que tenía que decir
+              </button>
+            </>
+          ) : (
+            <div className="anim-fadeup">
+              <p className="mt-4 rounded-2xl bg-indigo-50/70 p-4 text-[15px] leading-relaxed text-slate-700">
+                {x.a.split(/(\[\[.*?\]\])/).map((t, k) => t.startsWith('[[')
+                  ? <b key={k} className="text-indigo-700">{t.slice(2, -2)}</b>
+                  : t)}
+              </p>
+              <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mt-4 mb-2">
+                Tocá las palabras clave que dijiste ({nSaid}/{x.keys.length})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {x.keys.map((k) => (
+                  <button key={k} data-sfx="none" className={'name-chip' + (said[k] ? ' is-on' : '')}
+                          style={{ '--pc': '#059669' }} onClick={() => toggle(k)}>
+                    {said[k] && <i className="fa-solid fa-check" />}{k}
+                  </button>
+                ))}
+              </div>
+              <button className="btn btn-primary mt-5 w-full sm:w-auto" onClick={next}>
+                {last ? 'Ver resultado' : 'Siguiente pregunta'} <i className="fa-solid fa-arrow-right" />
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   /* ==================================================================
      6b2b · LENGUA · PONÉ LOS NOMBRES
@@ -1471,9 +1761,7 @@
 
         <div className="card p-3 sm:p-6" key={'ex' + ri}>
           <PartCtx.Provider value={{ quiz: { solved: solved }, onTap: allDone ? null : tap, bad: bad }}>
-            {r.kind === 'historieta' ? <Historieta h={r.ex} />
-              : r.kind === 'noticia' ? <Noticia n={r.ex} />
-              : <div className="max-w-md mx-auto"><Aviso a={r.ex} /></div>}
+            <ExDraw r={r} />
           </PartCtx.Provider>
         </div>
 
@@ -1629,9 +1917,7 @@
 
         <div className="card p-3 sm:p-6">
           <PartCtx.Provider value={ctx}>
-            {r.kind === 'historieta' ? <Historieta h={r.ex} />
-              : r.kind === 'noticia' ? <Noticia n={r.ex} />
-              : <div className="max-w-md mx-auto"><Aviso a={r.ex} /></div>}
+            <ExDraw r={r} />
           </PartCtx.Provider>
         </div>
 
@@ -2760,7 +3046,8 @@
      8 · MENÚ PRINCIPAL
      ================================================================== */
   /** Juegos que dan estrellas (las Flashcards y el Resumen no). */
-  const isScored = (g) => g.type !== 'resumen' && g.type !== 'cards' && g.type !== 'ejemplos';
+  const NO_SCORE = ['resumen', 'cards', 'ejemplos', 'infografias'];
+  const isScored = (g) => NO_SCORE.indexOf(g.type) === -1;
 
   /** Estrellas ganadas en una materia: { total, max }. */
   function starsOf(S, progress) {
@@ -2837,7 +3124,7 @@
                 <h3 className="font-black text-lg leading-tight">{g.name}</h3>
                 <p className="text-sm text-slate-500 mt-1 flex-1">{g.desc}</p>
                 <div className="flex items-center justify-between mt-4">
-                  {g.type === 'resumen' || g.type === 'ejemplos'
+                  {g.type === 'resumen' || g.type === 'ejemplos' || g.type === 'infografias'
                     ? <span className="text-xs font-bold text-slate-400">Sin puntaje · sólo leer</span>
                     : g.type === 'cards'
                       ? <span className="text-xs font-bold text-amber-600">{knownCount}/{S.FLASHCARDS.length} ya las sé</span>
@@ -3068,6 +3355,8 @@
     else if (game.type === 'nombrar')  content = <NombrarGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'partes')   content = <PartsGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'ejemplos') content = <EjemplosView onExit={back} />;
+    else if (game.type === 'infografias') content = <InfografiasView onExit={back} />;
+    else if (game.type === 'explicar') content = <ExplicarGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'resumen')  content = <Resumen onExit={back} />;
     else if (game.type === 'quiz')     content = <QuizGame key={game.id + nonce} kind={game.id} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'speaking') content = <SpeakingGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;

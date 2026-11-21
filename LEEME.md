@@ -2,10 +2,11 @@
 
 App web de una sola página para repasar tres materias:
 
-- **Ciencias Sociales** · "Pueblos originarios de Santa Fe" y "Recursos naturales". El contenido
-  sale del resumen `pueblos_originarios_de_santa_fe.md` y de la fotocopia
-  `recursos-naturales.jpg` (al arcade de recursos se le sumaron ejemplos de
-  cosas hechas por el hombre: auto, casa, lápiz…).
+- **Ciencias Sociales** · "Santa Fe, de la Colonia a la Independencia": quién mandaba,
+  la sociedad colonial (pirámide), el circuito comercial, la ciudad, los pueblos
+  originarios (encomienda y reducción), la revolución, la autonomía, la Liga de los
+  Pueblos Libres y los dos congresos. El contenido sale de los resúmenes de clase
+  (hojas 1 a 9) y de la hoja con las fechas para saber de memoria.
 - **Lengua** · publicidad y propaganda, la historieta, la noticia y las reglas
   de tilde (agudas, graves y esdrújulas). El contenido sale de las fotocopias de
   clase; las historietas, noticias y avisos de ejemplo están inventados para
@@ -36,15 +37,18 @@ npx serve .
 
 ## Los juegos
 
+En **Ciencias Sociales** (todo en `sociales.js`):
+
 | Juego | Qué practica |
 |---|---|
-| 🧠 **Trivia contrarreloj** | 10 preguntas al azar de un banco de 68. Reloj de 20 s, racha con multiplicador y explicación después de cada respuesta. |
-| 🕰️ **Línea de tiempo** | 3 rondas: hay que tocar los hechos del más antiguo al más nuevo (nómades → sedentarios → Solís 1516 → fundación 1573 → traslado 1649; y 1993 → 2005 → 2020 → hoy). La fecha se revela al acertar. |
-| 🔗 **Unir con flechas** | 4 rondas al azar de 7 (dónde vivía cada pueblo, palabras clave, fechas, pueblos de hoy, casas y caciques, números, recursos naturales). Cada par resuelto queda con su propio **color y número**. |
-| 🃏 **Flashcards** | 36 tarjetas con volteo 3D, en 6 mazos. Se pueden marcar como "ya la sé" y queda guardado. |
-| ⚡ **Cazador de Pueblos** | Arcade: caen tarjetas y hay que tirarlas al balde Guaycurú / Chaná-Timbú / Guaraníes. 3 vidas, combos y reloj de 9 s. |
-| 🥾 **¿Nómade o sedentario?** | Mismo arcade, con dos baldes: Nómades / Sedentarios. |
-| 🍃 **¿Es un recurso natural?** | Mismo arcade: Recurso natural / Lo hizo el hombre. |
+| 🗺️ **Infografías con sus partes** | Dibujos hechos en la app, con cada parte marcada: ¿quién mandaba? (rey → virrey → gobernación → Cabildo), la pirámide social, el plano de Santa Fe la Vieja, el mapa del circuito comercial (qué llegaba y qué salía) y una reducción. Se pueden ocultar los nombres. Sin puntaje. |
+| 🏷️ **Poné los nombres** | Las mismas infografías con un **?** en cada parte: se elige el nombre y se toca dónde va (hay nombres que sobran). |
+| 👆 **Encontrá en el dibujo** | "Tocá el Cabildo", "Tocá a los criollos", "Tocá de dónde traían el agua"… y preguntas sobre cada dibujo. |
+| 🗣️ **Decilo con tus palabras** | Las 9 preguntas de "Para que Santino lo diga con sus palabras": contesta en voz alta, ve la respuesta y marca las palabras clave que dijo. |
+| 🧠 Trivia · 🕰️ Línea de tiempo · 🔗 Unir · 🃏 Flashcards | 78 preguntas, 4 líneas de tiempo (las fechas de memoria, colonia, revolución, autonomía e independencia), 10 rondas para unir y 33 tarjetas. |
+| ⚡ Arcades | **¿Santa Fe o Buenos Aires?**, **¿Qué congreso fue?**, **¿Quién es quién en la pirámide?** y **¿Encomienda o reducción?** |
+
+El progreso de Sociales arrancó de cero con los temas nuevos (`estudioSanti.sociales.v2`).
 
 En **Lengua**:
 
@@ -63,8 +67,8 @@ sílabas y cuál suena fuerte): la clase y si lleva tilde se calculan solas. Las
 historietas, noticias y avisos están en `HISTORIETAS`, `NOTICIAS` y `AVISOS`.
 El progreso de Lengua arrancó de cero con los temas nuevos (`estudioSanti.lengua.v2`).
 
-En las dos materias hay un **Resumen para leer** con la ficha de datos, el texto por secciones
-y el cuadro de los tres pueblos.
+Sociales y Lengua tienen un **Resumen para leer** con la ficha de datos, el texto por secciones
+y un cuadro (en Sociales, las fechas de memoria).
 
 ## Inglés (examen final · Learning Lands 2)
 
@@ -98,8 +102,9 @@ abril, Argentina, teacher Camila…): se cambian en `PERSONAL` dentro de `ingles
 - Cada juego con puntaje da **hasta 3 estrellas** según el porcentaje de aciertos
   (90 % → 3, 70 % → 2, 50 % → 1). Se guarda la mejor.
 - Cada partida suma **XP** (y las flashcards marcadas como sabidas, 5 XP cada una).
-- El XP hace subir de **nivel**: Aprendiz → Explorador → Rastreador → Navegante del
-  Paraná → Guardián de la historia → Sabio de los pueblos → Gran cacique del saber.
+- El XP hace subir de **nivel**. Cada materia tiene sus propios niveles (en Sociales: Aprendiz →
+  Vecino del Cabildo → Arriero de mulas → Navegante del Paraná → Granadero a caballo →
+  Diputado del Congreso → Prócer de la historia).
   Al subir aparece un cartel con confeti.
 
 ## Detalles
@@ -124,7 +129,8 @@ abril, Argentina, teacher Camila…): se cambian en `PERSONAL` dentro de `ingles
 ```
 index.html   Estructura + componentes de React (JSX inline, así funciona con file://)
 styles.css   Tema visual, animaciones, tarjeta con volteo 3D, línea de tiempo, drag & drop
-app.js       Utilidades + datos de Ciencias Sociales (trivia, línea de tiempo, pares, flashcards, baldes)
+app.js       Utilidades (sonido, confeti, progreso guardado, niveles)
+sociales.js  Datos de Ciencias Sociales (trivia, línea de tiempo, pares, flashcards, baldes, infografías)
 lengua.js    Datos de Lengua, con la misma forma
 ingles.js    Datos de Inglés + la voz (APP.say) y el micrófono (APP.listen)
 audio/       musica.mp3 (20 min recortados del original, 96 kbps) y efectos.mp3 (todos los efectos)
@@ -135,6 +141,6 @@ manifest.webmanifest, sw.js   Lo que hace falta para instalarla en el celular
 > El archivo original de la música pesa 1 GB (12 horas), así que no se sube a
 > GitHub (está en `.gitignore`). La app usa el recorte de `audio/musica.mp3`.
 
-Para agregar o corregir contenido: Sociales está en `app.js` y Lengua en `lengua.js`
+Para agregar o corregir contenido: Sociales está en `sociales.js` y Lengua en `lengua.js`
 (`TRIVIA`, `TIMELINE_ROUNDS`, `MATCH_ROUNDS`, `FLASHCARDS`, `CLASSIFY_GAMES`, `FICHA`,
 `RESUMEN` y la tabla del resumen). Cada materia se arma al final de su archivo.

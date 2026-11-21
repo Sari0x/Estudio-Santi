@@ -684,3 +684,109 @@ body {
   box-shadow: 0 6px 14px rgba(30, 27, 58, .2);
 }
 .name-chip.is-used { opacity: .45; border-style: dashed; cursor: default; }
+
+/* ------------- SOCIALES: infografías dibujadas ------------- */
+.info-draw { max-width: 30rem; margin: 0 auto; }
+.info-title { text-align: center; font-weight: 900; color: #3730a3; margin-bottom: 1.4rem; }
+.info-foot { text-align: center; font-size: .75rem; font-weight: 800; color: #94a3b8; margin-top: .9rem; }
+
+/* ¿Quién mandaba? */
+.mando { display: flex; flex-direction: column; align-items: center; }
+.mando-box {
+  width: 100%; max-width: 22rem; display: flex; align-items: center; gap: .75rem;
+  background: #fff; border: 2px solid #e2e8f0; border-left: 6px solid var(--pc);
+  border-radius: 1rem; padding: .7rem .9rem; min-height: 3.4rem;
+}
+.mando-box:not(:has(.mando-d)) { justify-content: center; }
+.mando-emoji { font-size: 1.8rem; line-height: 1; }
+.mando-d { font-size: .8rem; color: #475569; font-weight: 700; line-height: 1.3; }
+.mando-arrow { color: #a5b4fc; font-size: 1.1rem; margin: .45rem 0 1.05rem; }
+
+/* Pirámide social */
+.piramide { display: flex; flex-direction: column; align-items: center; gap: 1.15rem; }
+.piramide-side { font-size: .65rem; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; color: #94a3b8; }
+.piramide-side.top { margin-bottom: -.3rem; }
+.piramide-row { width: 100%; display: flex; justify-content: center; }
+.piramide-fill {
+  display: flex; align-items: center; justify-content: center; gap: .5rem; flex-wrap: wrap;
+  min-height: 2.9rem; padding: .35rem .6rem; border-radius: .6rem; text-align: center;
+  background: color-mix(in srgb, var(--pc) 18%, #fff); border: 2px solid color-mix(in srgb, var(--pc) 55%, #fff);
+}
+.piramide-emoji { font-size: 1.35rem; line-height: 1; }
+.piramide-d { font-size: .72rem; font-weight: 800; color: #334155; line-height: 1.2; }
+.piramide-row.part-labeled, .piramide-row.part-slot, .piramide-row.part-tap:hover { outline: none; box-shadow: none; }
+.piramide-row.part-labeled .piramide-fill, .piramide-row.part-slot .piramide-fill { outline: 2.5px dashed var(--pc); outline-offset: 2px; }
+.piramide-row.part-slot .piramide-fill { outline-color: #94a3b8; }
+.piramide-row > .part-tag { left: 50%; transform: translateX(-50%); top: -1rem; }
+.piramide-row.part-ok, .piramide-row.part-bad { box-shadow: none !important; }
+.piramide-row.part-ok .piramide-fill { box-shadow: 0 0 0 4px var(--c-ok); }
+.piramide-row.part-bad .piramide-fill { box-shadow: 0 0 0 4px var(--c-bad); }
+
+/* Plano de la ciudad */
+.plano { display: flex; gap: .55rem; align-items: stretch; }
+.plano-grid {
+  flex: 1; display: grid; grid-template-columns: repeat(5, 1fr); gap: 1.25rem .45rem; padding-bottom: 1rem;
+  background: #e7e5e4; padding: .5rem; border-radius: .8rem;
+}
+.plano-cell {
+  aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+  background: #fff; border-radius: .35rem; font-size: 1.5rem; box-shadow: 0 1px 0 rgba(0,0,0,.08);
+}
+.plano-vacia { background: #f5f5f4; }
+.plano-plaza { background: #dcfce7; }
+.plano-chacras { background: #ecfccb; }
+.plano-cell > .part-tag, .plano-rio > .part-tag {
+  top: auto; bottom: -.7rem; left: 50%; transform: translateX(-50%); font-size: .5rem; padding: .15rem .3rem;
+}
+.plano-rio {
+  width: 2.6rem; display: flex; flex-direction: column; justify-content: space-around; align-items: center;
+  background: linear-gradient(180deg, #7dd3fc, #0ea5e9); border-radius: .8rem; font-size: 1.2rem;
+}
+.plano-rio > .part-tag { bottom: auto; top: 50%; transform: translate(-50%, -50%) rotate(-90deg); }
+
+/* Circuito comercial */
+.circ-map {
+  position: relative; aspect-ratio: 4 / 4.4; border-radius: 1rem; overflow: visible;
+  background: radial-gradient(circle at 30% 20%, #fef3c7, #fde68a 60%, #fcd34d);
+  border: 2px solid #f59e0b55;
+}
+.circ-svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.circ-route { stroke: #92400e; stroke-width: .8; stroke-dasharray: 2 1.6; vector-effect: non-scaling-stroke; stroke-width: 2.5px; }
+.circ-river { fill: none; stroke: #0ea5e9; stroke-width: 7px; stroke-linecap: round; vector-effect: non-scaling-stroke; opacity: .85; }
+.circ-node {
+  position: absolute; transform: translate(-50%, -50%);
+  width: 2.8rem; height: 2.8rem; border-radius: 99px; display: flex; align-items: center; justify-content: center;
+  background: #fff; border: 3px solid var(--pc); font-size: 1.35rem; box-shadow: 0 3px 8px rgba(0,0,0,.15);
+}
+.circ-node.is-main { width: 3.3rem; height: 3.3rem; font-size: 1.6rem; }
+.circ-node.part-tap:active { transform: translate(-50%, -50%) scale(.95); }
+.circ-node > .part-tag { top: auto; bottom: -1.1rem; left: 50%; transform: translateX(-50%); }
+.circ-parana {
+  position: absolute; left: 70%; top: 32%; transform: translate(-50%, -50%);
+  background: #e0f2fe; border: 3px solid var(--pc); border-radius: 99px; padding: .2rem .5rem; font-size: 1.15rem;
+}
+.circ-parana > .part-tag { top: auto; bottom: -1.1rem; left: 50%; transform: translateX(-50%); }
+.circ-list { border-radius: .9rem; padding: .6rem .7rem; font-size: .78rem; font-weight: 700; color: #334155; line-height: 1.55; }
+.circ-list.llegan { background: #ecfdf5; border: 2px solid #a7f3d0; }
+.circ-list.salen  { background: #fff7ed; border: 2px solid #fed7aa; }
+.circ-list-h { font-size: 1.05rem; margin-bottom: .2rem; }
+
+/* Reducción */
+.reduccion {
+  display: flex; flex-direction: column; gap: 1.1rem; padding: 1rem .8rem;
+  background: #f0fdf4; border: 2px dashed #86efac; border-radius: 1.2rem;
+}
+.red-top, .red-bottom { display: flex; justify-content: space-around; align-items: end; }
+.red-mid { display: flex; gap: .8rem; align-items: stretch; }
+.red-col { display: flex; flex-direction: column; justify-content: space-around; gap: 1rem; }
+.red-casa { font-size: 1.7rem; line-height: 1; padding: .15rem; }
+.red-iglesia { display: flex; flex-direction: column; align-items: center; font-size: 2.6rem; line-height: 1; padding: .2rem .5rem; }
+.red-plaza {
+  flex: 1; display: flex; align-items: center; justify-content: center; font-size: 1.6rem;
+  background: #bbf7d0; border-radius: .8rem; min-height: 6rem;
+}
+.red-plaza > .part-tag { left: 50%; transform: translateX(-50%); }
+.plano-cell > .part-tag {
+  white-space: normal; width: max-content; max-width: calc(100% + .35rem);
+  text-align: center; line-height: 1.1; bottom: -.95rem;
+}
