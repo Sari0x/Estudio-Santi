@@ -51,6 +51,7 @@ En **Lengua**:
 | Juego | Qué practica |
 |---|---|
 | 🧩 **Ejemplos con sus partes** | Historietas, noticias y avisos dibujados en la app, con cada parte marcada con su nombre (cartelera, globo, onomatopeya, metáfora visual · volanta, título, copete, cuerpo, imagen, epígrafe · palabra pista y palabras lindas). Se pueden ocultar los nombres para repasar. Tiene también una pestaña de tildes con las palabras partidas en sílabas. Sin puntaje. |
+| 🏷️ **Poné los nombres** | 4 ejemplos (historieta, noticia, publicidad y propaganda) con un **?** en cada parte: se elige un nombre del banco de abajo y se toca la parte donde va. Hay nombres que sobran (de otros textos) para no adivinar por descarte. En los avisos también hay que poner si es *Publicidad* o *Propaganda*. Cuentan como aciertos las partes nombradas bien a la primera. |
 | 👆 **Encontrá las partes** | 5 ejemplos (2 historietas, 1 noticia, 1 publicidad y 1 propaganda): "Tocá la cartelera", "Tocá el epígrafe", "¿Qué significa 💡?", "¿Publicidad o propaganda?"… |
 | 🔎 **Detective de tildes** | Paso 1: ¿qué sílaba suena más fuerte? · ¿aguda, grave o esdrújula? · Paso 2: ¿en qué termina? · ¿cómo se escribe? |
 | 📰 **Detective de noticias** | Leer una noticia corta y contestar ¿qué?, ¿quiénes?, ¿cuándo?, ¿dónde?, ¿para qué? |

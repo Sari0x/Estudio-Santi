@@ -654,3 +654,33 @@ body {
 .aviso:has(.part-labeled) .aviso-tit { line-height: 1.9; margin-top: 1rem; }
 .aviso:has(.part-labeled) .aviso-txt { line-height: 2.6; }
 .aviso-marca.part-labeled { margin-top: 1.5rem; }
+
+/* Poné los nombres: partes sin nombre ("?") y banco de nombres */
+.part-slot { outline: 2.5px dashed #94a3b8; outline-offset: 3px; border-radius: .45rem; }
+.part-tag.is-empty {
+  background: #475569; min-width: 1.35rem; text-align: center;
+  font-size: .75rem; padding: .2rem .35rem;
+}
+.part-labeled.part-ok, .part-labeled { transition: outline-color .3s ease; }
+.news-titulo.part-slot, .news-copete.part-slot { margin-top: 1.35rem; }
+.news-epi.part-slot { margin-top: 1.3rem; }
+.aviso:has(.part-slot) .aviso-tit { line-height: 1.9; margin-top: 1rem; }
+.aviso:has(.part-slot) .aviso-txt { line-height: 2.6; }
+.aviso-marca.part-slot { margin-top: 1.5rem; }
+.aviso-tipo-slot {
+  display: inline-block; margin: .6rem 0 .4rem; padding: .3rem .75rem; border-radius: 99px;
+  font-size: .72rem; font-weight: 900; text-transform: uppercase; letter-spacing: .05em;
+  color: #475569; background: rgba(255, 255, 255, .8);
+}
+.name-chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .5rem .8rem; border-radius: 999px; border: 2px solid var(--pc);
+  background: #fff; color: var(--pc); font-weight: 900; font-size: .9rem;
+  transition: transform .15s ease, background .15s ease, box-shadow .15s ease;
+}
+.name-chip:active { transform: scale(.95); }
+.name-chip.is-on {
+  background: var(--pc); color: #fff; transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 6px 14px rgba(30, 27, 58, .2);
+}
+.name-chip.is-used { opacity: .45; border-style: dashed; cursor: default; }

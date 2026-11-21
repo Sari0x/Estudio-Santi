@@ -1236,16 +1236,20 @@
     const ctx = useContext(PartCtx);
     const info = useSubject().PART_INFO[type] || {};
     const Tag = as || 'div';
+    /* quiz = "Poné los nombres": las partes sin nombre muestran un "?". */
+    const q = ctx.quiz;
+    const empty = q && !q.solved[type];
     let cls = 'part ' + (className || '');
-    if (ctx.labels) cls += ' part-labeled';
-    if (ctx.onTap) cls += ' part-tap';
+    if (ctx.labels || (q && !empty)) cls += ' part-labeled';
+    if (empty) cls += ' part-slot';
+    if (ctx.onTap && !(q && !empty)) cls += ' part-tap';
     if (ctx.reveal === type) cls += ' part-ok';
     if (ctx.bad != null && ctx.bad === k) cls += ' part-bad';
     return (
       <Tag className={cls} style={{ '--pc': info.c }}
            onClick={ctx.onTap ? (e) => { e.stopPropagation(); ctx.onTap(type, k, e); } : undefined}>
         {children}
-        {ctx.labels && !noTag && <span className="part-tag">{info.n}</span>}
+        {(ctx.labels || q) && !noTag && <span className={'part-tag' + (empty ? ' is-empty' : '')}>{empty ? '?' : info.n}</span>}
       </Tag>
     );
   }
@@ -1330,8 +1334,14 @@
 
   function Aviso({ a, showTipo }) {
     const seen = {};
+    const q = useContext(PartCtx).quiz;
     return (
       <div className={'aviso aviso-' + a.color}>
+        {q && (   /* en "Poné los nombres": ¿es publicidad o propaganda? */
+          <Part type={a.tipo} k="tipo" className="aviso-tipo-slot">
+            {q.solved[a.tipo] ? 'Este aviso es ' + (a.tipo === 'publicidad' ? 'PUBLICIDAD' : 'PROPAGANDA') : 'Este aviso es…'}
+          </Part>
+        )}
         {showTipo && (
           <span className={'aviso-tipo ' + a.tipo}>
             {a.tipo === 'publicidad' ? 'Publicidad · quiere vender' : 'Propaganda · quiere convencer'}
@@ -1350,6 +1360,154 @@
     noticia:    { n: 'Noticia',    icon: 'fa-newspaper' },
     aviso:      { n: 'Aviso',      icon: 'fa-bullhorn' }
   };
+
+  /* ==================================================================
+     6b2b · LENGUA · PONÉ LOS NOMBRES
+     Cada parte del ejemplo tiene un "?". Se elige un nombre del banco
+     (abajo) y se toca la parte donde va. Hay nombres que sobran.
+     ================================================================== */
+  function NombrarGame({ title, onFinish, onExit }) {
+    const S = useSubject();
+    const INFO = S.PART_INFO;
+    const [rounds] = useState(() => S.NOMBRAR.build().map((r) => ({ ...r, chips: APP.shuffle(r.types.concat(r.extra)) })));
+    const TOTAL = rounds.reduce((a, r) => a + r.types.length, 0);
+
+    const [ri, setRi]         = useState(0);
+    const [chip, setChip]     = useState(null);   // nombre elegido del banco
+    const [solved, setSolved] = useState({});     // partes ya nombradas
+    const [missed, setMissed] = useState({});     // partes con algún error
+    const [msg, setMsg]       = useState(null);   // { kind: ok | bad | hint, t }
+    const [bad, setBad]       = useState(null);
+    const [score, setScore]   = useState(0);
+    const [correct, setCorrect] = useState(0);
+    const [streak, setStreak] = useState(0);
+    const [done, setDone]     = useState(false);
+    const badTimer = useRef(null);
+    useEffect(() => () => clearTimeout(badTimer.current), []);
+
+    const r = rounds[ri];
+    const nSolved = r.types.filter((t) => solved[t]).length;
+    const allDone = nSolved === r.types.length;
+    const lastRound = ri + 1 >= rounds.length;
+    const doneSoFar = rounds.slice(0, ri).reduce((a, x) => a + x.types.length, 0) + nSolved;
+
+    function pickChip(t) {
+      if (solved[t]) return;
+      APP.sfx.play('pick');
+      setChip(chip === t ? null : t);
+      setMsg(null);
+    }
+
+    function tap(type, k, ev) {
+      if (allDone || solved[type]) return;
+      if (!chip) {
+        APP.sfx.play('flip');
+        setMsg({ kind: 'hint', t: 'Primero elegí un nombre de abajo 👇 y después tocá la parte donde va.' });
+        return;
+      }
+      if (chip === type) {
+        const first = !missed[type];
+        const pts = first ? 100 + Math.min(streak * 20, 100) : 30;
+        setScore((s) => s + pts);
+        if (first) { setCorrect((c) => c + 1); setStreak((s) => s + 1); }
+        fx.good({ x: ev.clientX, y: ev.clientY }, pts);
+        setSolved(Object.assign({}, solved, { [type]: true }));
+        setChip(null);
+        setMsg({ kind: 'ok', t: INFO[type].n + ': ' + INFO[type].d });
+      } else {
+        fx.bad();
+        setStreak(0);
+        // pierde el "a la primera" la parte del nombre que eligió (o la que tocó, si el nombre sobraba)
+        const who = r.types.indexOf(chip) !== -1 ? chip : type;
+        setMissed(Object.assign({}, missed, { [who]: true }));
+        setBad(k);
+        clearTimeout(badTimer.current);
+        badTimer.current = setTimeout(() => setBad(null), 700);
+        setMsg({ kind: 'bad', t: 'Ahí no va «' + INFO[chip].n + '». Recordá: ' + INFO[chip].d });
+      }
+    }
+
+    function next() {
+      if (lastRound) { setDone(true); return; }
+      setRi(ri + 1); setChip(null); setSolved({}); setMissed({}); setMsg(null);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    if (done) {
+      return <ResultScreen title={title} score={score} correct={correct} total={TOTAL}
+        extra={<p className="text-sm text-slate-500">Nombraste <b className="text-indigo-600">{TOTAL}</b> partes en {rounds.length} ejemplos 🏷️<br />(los aciertos cuentan las que pusiste bien a la primera)</p>}
+        onRetry={() => onFinish({ score, correct, total: TOTAL, retry: true })}
+        onExit={() => onFinish({ score, correct, total: TOTAL })} />;
+    }
+
+    const msgCls = !msg ? '' : msg.kind === 'ok' ? 'text-emerald-700' : msg.kind === 'bad' ? 'text-rose-700' : 'text-slate-600';
+
+    return (
+      <div className="no-touch-zoom pb-64">
+        <GameHeader
+          title={title}
+          subtitle={'Ejemplo ' + (ri + 1) + ' de ' + rounds.length + ' · ' + KIND[r.kind].n}
+          onExit={onExit}
+          progress={{ v: doneSoFar, m: TOTAL }}
+          right={
+            <div className="text-right">
+              <p className="font-black text-indigo-600 leading-none">{score}</p>
+              <p className="text-[10px] uppercase font-bold text-slate-400">puntos</p>
+            </div>
+          } />
+
+        <div className="card p-4 sm:p-5 mb-4 anim-fadeup" key={ri}>
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <Chip icon={KIND[r.kind].icon}>{KIND[r.kind].n}</Chip>
+            <span className="text-sm font-black text-emerald-600">{nSolved}/{r.types.length} partes</span>
+          </div>
+          <h3 className="text-lg sm:text-2xl font-black leading-snug">
+            <i className="fa-solid fa-tags text-lime-600 mr-2" />Poné el nombre de cada parte
+          </h3>
+          <p className="text-sm text-slate-500 mt-1">
+            Elegí un nombre de abajo y tocá la parte con <b>?</b> donde va. ¡Ojo, hay nombres que sobran!
+          </p>
+        </div>
+
+        <div className="card p-3 sm:p-6" key={'ex' + ri}>
+          <PartCtx.Provider value={{ quiz: { solved: solved }, onTap: allDone ? null : tap, bad: bad }}>
+            {r.kind === 'historieta' ? <Historieta h={r.ex} />
+              : r.kind === 'noticia' ? <Noticia n={r.ex} />
+              : <div className="max-w-md mx-auto"><Aviso a={r.ex} /></div>}
+          </PartCtx.Provider>
+        </div>
+
+        <div className="answer-bar">
+          <div className="max-w-app mx-auto px-4 pt-2">
+            {msg && <p className={'text-sm font-bold mb-2 leading-snug ' + msgCls} key={msg.t}>{msg.t}</p>}
+            {allDone ? (
+              <div className="rounded-2xl p-3 bg-emerald-50 border-2 border-emerald-200 anim-fadeup">
+                <p className="font-black text-emerald-700"><i className="fa-solid fa-circle-check mr-1" /> {praise()} ¡Nombraste todas las partes!</p>
+                <button className="btn btn-primary mt-3 w-full sm:w-auto" onClick={next}>
+                  {lastRound ? 'Ver resultado' : 'Siguiente ejemplo'} <i className="fa-solid fa-arrow-right" />
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-1.5">
+                  {chip ? <>Ahora tocá dónde va <span style={{ color: INFO[chip].c }}>{INFO[chip].n}</span></> : 'Elegí un nombre'}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {r.chips.map((t) => (
+                    <button key={t} data-sfx="none" disabled={!!solved[t]}
+                            className={'name-chip' + (chip === t ? ' is-on' : '') + (solved[t] ? ' is-used' : '')}
+                            style={{ '--pc': INFO[t].c }} onClick={() => pickChip(t)}>
+                      {solved[t] && <i className="fa-solid fa-check" />}{INFO[t].n}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   /* ==================================================================
      6b3 · LENGUA · ENCONTRÁ LAS PARTES
@@ -2907,6 +3065,7 @@
     else if (game.type === 'cards')    content = <Flashcards onExit={back} onXp={addXp} />;
     else if (game.type === 'classify') content = <ClassifyGame key={game.id + nonce} kind={game.id} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'detective') content = <DetectiveGame key={game.id + nonce} kind={game.id} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
+    else if (game.type === 'nombrar')  content = <NombrarGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'partes')   content = <PartsGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'ejemplos') content = <EjemplosView onExit={back} />;
     else if (game.type === 'resumen')  content = <Resumen onExit={back} />;

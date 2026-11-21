@@ -114,7 +114,9 @@
     epigrafe: { n: 'Epígrafe',         c: '#2563eb', d: 'Explica lo que muestra la imagen. Va abajo de la foto.' },
     pista:    { n: 'Palabra pista',    c: '#dc2626', d: 'COMPRÁ / VENTA = publicidad. CUIDÁ / AYUDÁ / NO TIRES = propaganda.' },
     lindas:   { n: 'Palabras lindas',  c: '#059669', d: 'Palabras lindas para convencerte: feliz, saludable, emocionante.' },
-    marca:    { n: '¿Quién lo dice?',  c: '#64748b', d: 'La empresa, el negocio o la campaña que hizo el aviso.' }
+    marca:    { n: '¿Quién lo dice?',  c: '#64748b', d: 'La empresa, el negocio o la campaña que hizo el aviso.' },
+    publicidad: { n: 'Publicidad',     c: '#d97706', d: 'Quiere VENDER algo. Pista: COMPRÁ / VENTA.' },
+    propaganda: { n: 'Propaganda',     c: '#059669', d: 'Quiere CONVENCER de una idea. Pista: CUIDÁ / AYUDÁ / NO TIRES.' }
   };
 
   /** Metáforas visuales y lo que significan. */
@@ -814,6 +816,31 @@
     }
   };
 
+  /* =====================================================================
+     PONÉ LOS NOMBRES
+     Cada parte del ejemplo aparece con un "?". Santi elige un nombre del
+     banco y toca la parte donde va. `types` = las partes a nombrar;
+     `extra` = nombres que sobran (de otros textos), para no adivinar.
+     ===================================================================== */
+  const NOMBRAR = {
+    build() {
+      const pub  = APP.pick(AVISOS.filter((a) => a.tipo === 'publicidad'), 1)[0];
+      const prop = APP.pick(AVISOS.filter((a) => a.tipo === 'propaganda'), 1)[0];
+      return [
+        { kind: 'historieta', ex: APP.pick(HISTORIETAS, 1)[0],
+          types: ['cartel', 'globo', 'ono', 'meta'],
+          extra: APP.pick(['volanta', 'epigrafe', 'copete', 'pista'], 2) },
+        { kind: 'noticia', ex: APP.pick(NOTICIAS, 1)[0],
+          types: ['volanta', 'titulo', 'copete', 'cuerpo', 'imagen', 'epigrafe'],
+          extra: APP.pick(['cartel', 'globo', 'ono', 'lindas'], 2) }
+      ].concat(APP.shuffle([pub, prop]).map((a) => ({
+        kind: 'aviso', ex: a,
+        types: [a.tipo, 'pista', 'lindas', 'marca'],
+        extra: [a.tipo === 'publicidad' ? 'propaganda' : 'publicidad'].concat(APP.pick(['ono', 'epigrafe', 'volanta'], 1))
+      })));
+    }
+  };
+
   const EJEMPLOS = { HISTORIETAS, NOTICIAS, AVISOS, METAS, TILDES };
 
   /* =====================================================================
@@ -824,6 +851,8 @@
       desc: 'Historietas, noticias y avisos de verdad, con cada parte marcada. ¡Mirá antes de jugar!', tint: 'from-pink-500 to-rose-600' },
     { id: 'partes',     type: 'partes', name: 'Encontrá las partes', icon: 'fa-hand-pointer',
       desc: 'Tocá la cartelera, el globo, la volanta, el epígrafe… en historietas, noticias y avisos.', tint: 'from-orange-500 to-amber-500' },
+    { id: 'nombrar',    type: 'nombrar', name: 'Poné los nombres', icon: 'fa-tags',
+      desc: 'Elegí cada nombre y ponelo en su parte: en la historieta, la noticia, la publicidad y la propaganda.', tint: 'from-lime-500 to-emerald-600' },
     { id: 'trivia',     type: 'trivia', name: 'Trivia contrarreloj', icon: 'fa-brain',
       desc: '10 preguntas con reloj, racha y puntos extra.', tint: 'from-indigo-500 to-violet-600' },
     { id: 'tildes',     type: 'detective', name: 'Detective de tildes', icon: 'fa-magnifying-glass',
@@ -865,6 +894,6 @@
     LEVELS,
     FICHA, RESUMEN, TABLA,
     TRIVIA,
-    MATCH_ROUNDS, FLASHCARDS, CLASSIFY_GAMES, DETECTIVES, PARTES, PART_INFO, EJEMPLOS, GAMES
+    MATCH_ROUNDS, FLASHCARDS, CLASSIFY_GAMES, DETECTIVES, PARTES, NOMBRAR, PART_INFO, EJEMPLOS, GAMES
   };
 })(window.APP);
