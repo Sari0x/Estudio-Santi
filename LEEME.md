@@ -67,6 +67,29 @@ sílabas y cuál suena fuerte): la clase y si lleva tilde se calculan solas. Las
 historietas, noticias y avisos están en `HISTORIETAS`, `NOTICIAS` y `AVISOS`.
 El progreso de Lengua arrancó de cero con los temas nuevos (`estudioSanti.lengua.v2`).
 
+### 📝 Evaluación y 🔁 Recuperatorio (Lengua)
+
+Están primeros en el menú de Lengua y salen de `examen.js`. Los dos tienen la misma forma
+(45 puntos) con ejemplos distintos:
+
+1. **¿Qué es cada cosa?** · 8 definiciones para escribir (publicidad = quiere vender,
+   propaganda = quiere convencer de una idea, historieta, noticia, cartelera, globo…).
+2. **La historieta** · partes numeradas (escribe cartelera, globo, onomatopeya, metáfora
+   visual) y qué significa una metáfora visual.
+3. **La noticia** · las 6 partes numeradas y preguntas (¿qué?, ¿quiénes?, ¿cuándo?, ¿dónde?, ¿para qué?).
+4-5. **Una publicidad y una propaganda** · ¿cuál es y por qué?, palabra pista, palabras lindas y quién lo dice.
+6. **Tildes** · un texto donde marca con "lápices de colores" 5 agudas, 5 graves y 5 esdrújulas.
+
+Santi responde (se guarda solo) y toca **Entregar**. Después un adulto toca **Soy el adulto:
+corregir**, ve cada respuesta al lado de la respuesta esperada y marca ✓ o ✗. En las tildes la
+app sugiere la clase de cada palabra y hay un botón para marcarlas según esa sugerencia.
+
+**La nota** va de 0 a 10: (puntos bien / 45) × 10, redondeada al número más cercano. Si quedó
+bastante por debajo lleva **-** (9,6 → **-10**) y si quedó bastante por arriba lleva **+**
+(9,3 → **+9**). Se aprueba con 6 (`APROBADO` en `examen.js`). Aprobado: redoble de tambor,
+fanfarria, aplausos, confeti, lluvia de emojis, sello gigante de ¡APROBADO! y una voz que lo
+felicita. Si no aprueba, aparece el botón para ir al **Recuperatorio**.
+
 Sociales y Lengua tienen un **Resumen para leer** con la ficha de datos, el texto por secciones
 y un cuadro (en Sociales, las fechas de memoria).
 
@@ -132,6 +155,7 @@ styles.css   Tema visual, animaciones, tarjeta con volteo 3D, línea de tiempo, 
 app.js       Utilidades (sonido, confeti, progreso guardado, niveles)
 sociales.js  Datos de Ciencias Sociales (trivia, línea de tiempo, pares, flashcards, baldes, infografías)
 lengua.js    Datos de Lengua, con la misma forma
+examen.js    Evaluación y Recuperatorio de Lengua (preguntas, ejemplos, textos de tildes y nota)
 ingles.js    Datos de Inglés + la voz (APP.say) y el micrófono (APP.listen)
 audio/       musica.mp3 (20 min recortados del original, 96 kbps) y efectos.mp3 (todos los efectos)
 icons/       Íconos de la app hechos con estudio.png (normales y "maskable" para Android)

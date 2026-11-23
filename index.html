@@ -57,6 +57,7 @@
   <script src="app.js"></script>
   <script src="sociales.js"></script>
   <script src="lengua.js"></script>
+  <script src="examen.js"></script>
   <script src="ingles.js"></script>
 
   <!-- ==================================================================
@@ -1246,11 +1247,18 @@
     if (ctx.onTap && !(q && !empty)) cls += ' part-tap';
     if (ctx.reveal === type) cls += ' part-ok';
     if (ctx.bad != null && ctx.bad === k) cls += ' part-bad';
+    /* nums = Evaluación: algunas partes llevan un número (por su clave k o,
+       si es la primera de su tipo, por el tipo) y Santi escribe el nombre. */
+    const num = ctx.nums ? (ctx.nums[k] || (!noTag ? ctx.nums[type] : null)) : null;
+    if (num) cls += ctx.numNames ? ' part-labeled' : ' part-slot';
     return (
       <Tag className={cls} data-part={type} style={Object.assign({ '--pc': info.c }, style)}
            onClick={ctx.onTap ? (e) => { e.stopPropagation(); ctx.onTap(type, k, e); } : undefined}>
         {children}
-        {(ctx.labels || q) && !noTag && <span className={'part-tag' + (empty ? ' is-empty' : '')}>{empty ? '?' : info.n}</span>}
+        {num
+          ? <span className={'part-tag part-num' + (ctx.numNames ? '' : ' is-empty')}>{ctx.numNames ? num + ' · ' + info.n : num}</span>
+          : ctx.nums ? null
+          : (ctx.labels || q) && !noTag && <span className={'part-tag' + (empty ? ' is-empty' : '')}>{empty ? '?' : info.n}</span>}
       </Tag>
     );
   }
@@ -3043,10 +3051,601 @@
   }
 
   /* ==================================================================
+     7c · LENGUA · EVALUACIÓN Y RECUPERATORIO (datos en examen.js)
+     Santi responde → entrega → un adulto marca ✓ / ✗ cada respuesta →
+     aparece la nota (de 0 a 10, con + y -) con redoble de tambor y, si
+     aprobó, una celebración bien exagerada.
+     ================================================================== */
+
+  /** Sonidos de la nota, sintetizados con Web Audio: redoble, platillo,
+      fanfarria de trompetas y aplausos. Respetan el botón de efectos. */
+  const examAudio = (function () {
+    let ctx = null, noise = null;
+    function ac() {
+      const C = window.AudioContext || window.webkitAudioContext;
+      if (!C) return null;
+      if (!ctx) ctx = new C();
+      if (ctx.state === 'suspended') ctx.resume();
+      if (!noise) {
+        noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
+        const d = noise.getChannelData(0);
+        for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+      }
+      return ctx;
+    }
+    /** Golpe de ruido filtrado (tambor, platillo, aplauso). */
+    function hit(c, t, dur, vol, type, freq, q) {
+      const s = c.createBufferSource(); s.buffer = noise;
+      const f = c.createBiquadFilter(); f.type = type; f.frequency.value = freq; if (q) f.Q.value = q;
+      const g = c.createGain();
+      g.gain.setValueAtTime(Math.max(0.001, vol), t);
+      g.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+      s.connect(f); f.connect(g); g.connect(c.destination);
+      s.start(t, Math.random() * Math.max(0, 1.9 - dur)); s.stop(t + dur + 0.02);
+    }
+    /** Nota de "trompeta": dos sierras un poco desafinadas y un filtro. */
+    function tone(c, t, freq, dur, vol) {
+      const g = c.createGain(), lp = c.createBiquadFilter();
+      lp.type = 'lowpass'; lp.frequency.value = 2400;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(vol, t + 0.03);
+      g.gain.setValueAtTime(vol, t + Math.max(0.04, dur - 0.08));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      lp.connect(g); g.connect(c.destination);
+      [-7, 7].forEach((det) => {
+        const o = c.createOscillator(); o.type = 'sawtooth'; o.frequency.value = freq; o.detune.value = det;
+        o.connect(lp); o.start(t); o.stop(t + dur + 0.05);
+      });
+    }
+    const N = { G4: 392, C5: 523.25, E5: 659.25, G5: 783.99, C6: 1046.5 };
+    return {
+      /** Redoble de tambor que va creciendo, `dur` segundos. */
+      redoble(dur) {
+        if (APP.sfx.isSfxMuted()) return;
+        const c = ac(); if (!c) return;
+        const t0 = c.currentTime + 0.03;
+        let t = t0, gap = 0.075;
+        while (t < t0 + dur) {
+          hit(c, t, 0.08, 0.12 + 0.45 * ((t - t0) / dur), 'bandpass', 1900, 0.9);
+          t += gap; gap = Math.max(0.034, gap * 0.965);
+        }
+      },
+      /** ¡Platillo, fanfarria y aplausos! */
+      aprobado() {
+        if (APP.sfx.isSfxMuted()) return;
+        const c = ac(); if (!c) return;
+        const t = c.currentTime + 0.02;
+        hit(c, t, 1.8, 0.55, 'highpass', 5000);     // platillo
+        hit(c, t, 0.5, 0.9, 'lowpass', 140);        // bombo
+        [['G4', 0, 0.13], ['C5', 0.15, 0.13], ['E5', 0.3, 0.13], ['G5', 0.45, 0.32],
+         ['E5', 0.8, 0.15], ['G5', 0.97, 1.5]].forEach(([n, d, len]) => tone(c, t + d, N[n], len, 0.11));
+        ['C5', 'E5', 'C6'].forEach((n) => tone(c, t + 0.97, N[n], 1.5, 0.07));
+        hit(c, t + 0.97, 1.8, 0.4, 'highpass', 6000);
+        for (let i = 0; i < 320; i++) {              // aplausos
+          const at = t + 1.1 + Math.random() * 4.5;
+          const fade = Math.max(0.05, 1 - Math.max(0, at - (t + 4.2)) / 1.4);
+          hit(c, at, 0.05, (0.04 + Math.random() * 0.14) * fade, 'bandpass', 900 + Math.random() * 1800, 1.2);
+        }
+      }
+    };
+  })();
+
+  /** Voz en castellano (la del navegador) para cantar la nota. */
+  const NUM_ES = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez'];
+  function decirES(txt) {
+    try {
+      if (APP.sfx.isSfxMuted() || !window.speechSynthesis) return;
+      const u = new SpeechSynthesisUtterance(txt);
+      u.lang = 'es-AR';
+      const vs = window.speechSynthesis.getVoices() || [];
+      const v = vs.find((x) => /^es[-_]AR/i.test(x.lang)) || vs.find((x) => /^es/i.test(x.lang));
+      if (v) u.voice = v;
+      u.pitch = 1.25;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(u);
+    } catch (e) { /* sin voz */ }
+  }
+  const notaDicha = (nt) => 'un ' + NUM_ES[nt.n] + (nt.signo === '-' ? ' menos' : nt.signo === '+' ? ' más' : '');
+
+  /** Ítems con respuesta escrita (todo menos el texto de tildes). */
+  const examItems = (ex) => ex.secciones.filter((s) => s.tipo !== 'tildes').reduce((a, s) => a.concat(s.items), []);
+  const silSec = (ex) => ex.secciones.find((s) => s.tipo === 'tildes');
+  /** Palabras que marcó Santi, por clase: { A: [palabra…], G: […], E: […] } */
+  function silPicks(sec, sil) {
+    const out = { A: [], G: [], E: [] };
+    sec.tokens.forEach((t) => { if (t && typeof t === 'object' && out[sil[t.i]]) out[sil[t.i]].push(t); });
+    return out;
+  }
+
+  function ItemLabel({ it }) {
+    return it.num ? <>Parte <span className="exam-num">{it.num}</span> ¿Cómo se llama?</> : it.q;
+  }
+
+  /** El ejemplo dibujado con las partes numeradas. */
+  function ExamDrawing({ sec, numNames }) {
+    const nums = useMemo(() => {
+      const m = {};
+      sec.items.forEach((it) => { if (it.num) m[it.key] = it.num; });
+      return m;
+    }, [sec]);
+    return (
+      <PartCtx.Provider value={{ nums, numNames }}>
+        <ExDraw r={{ kind: sec.kind, ex: sec.ex }} />
+      </PartCtx.Provider>
+    );
+  }
+
+  /** El texto de tildes, con las palabras marcadas de colores. */
+  function TildesTexto({ sec, sil, onTap }) {
+    const CL = useSubject().EXAM_CLASES;
+    return (
+      <p className={'exam-texto' + (onTap ? ' no-touch-zoom' : '')}>
+        {sec.tokens.map((t, j) => (typeof t !== 'object' ? t : (
+          <React.Fragment key={j}>
+            {t.lead}
+            <span className={'exam-word' + (sil[t.i] ? ' on' : '') + (onTap ? ' tap' : '')}
+                  style={sil[t.i] ? { '--wc': CL[sil[t.i]].c } : undefined}
+                  role={onTap ? 'button' : undefined}
+                  onClick={onTap ? () => onTap(t) : undefined}>
+              {t.word}{sil[t.i] && <sup className="exam-word-tag">{sil[t.i]}</sup>}
+            </span>
+            {t.trail}
+          </React.Fragment>
+        )))}
+      </p>
+    );
+  }
+
+  /* --------------------------- Santi responde --------------------------- */
+  function ExamDoing({ ex, st, save, onExit }) {
+    const S = useSubject();
+    const CL = S.EXAM_CLASES, CUPO = S.EXAM_CUPO;
+    const items = examItems(ex);
+    const sec = silSec(ex);
+    const [pen, setPen] = useState('A');
+    const [warn, setWarn] = useState(null);
+    const [confirm, setConfirm] = useState(false);
+    const picks = silPicks(sec, st.sil);
+    const nWritten = items.filter((it) => (st.answers[it.id] || '').trim()).length;
+    const done = nWritten + picks.A.length + picks.G.length + picks.E.length;
+    const max = items.length + 3 * CUPO;
+
+    const setAns = (k, v) => save((p) => ({ answers: Object.assign({}, p.answers, { [k]: v }) }));
+
+    function tapWord(t) {
+      if (st.sil[t.i] === pen) {            // tocar de nuevo = sacarla
+        APP.sfx.play('back');
+        save((p) => { const s = Object.assign({}, p.sil); delete s[t.i]; return { sil: s }; });
+        setWarn(null);
+        return;
+      }
+      if (picks[pen].length >= CUPO) {
+        APP.sfx.play('wrong');
+        setWarn('Ya marcaste ' + CUPO + ' ' + CL[pen].pl.toLowerCase() + '. Para cambiar una, tocala y se borra.');
+        return;
+      }
+      APP.sfx.play('pick');
+      save((p) => ({ sil: Object.assign({}, p.sil, { [t.i]: pen }) }));
+      setWarn(null);
+    }
+
+    function entregar() {
+      APP.sfx.play('win');
+      APP.confetti(90);
+      save({ stage: 'review', fecha: new Date().toISOString() });
+    }
+
+    return (
+      <div className="pb-10">
+        <GameHeader title={ex.titulo} subtitle={'Respondiste ' + done + ' de ' + max} onExit={onExit}
+                    progress={{ v: done, m: max }} />
+
+        <div className="card p-5 mb-4 anim-fadeup">
+          <Chip icon="fa-file-pen">{ex.name}</Chip>
+          <h3 className="text-xl sm:text-2xl font-black mt-2">¡A trabajar, Santi! ✏️</h3>
+          <p className="text-sm text-slate-500 mt-1">
+            Respondé todo con tranquilidad: lo que escribís se guarda solo. Cuando termines, tocá
+            <b> Entregar</b> al final de todo y un adulto lo corrige.
+          </p>
+        </div>
+
+        {ex.secciones.map((s) => (
+          <section key={s.id} className="card p-4 sm:p-6 mb-4">
+            <h3 className="exam-sec-title">{s.titulo}</h3>
+            <p className="text-sm text-slate-500 mb-4">{s.consigna}</p>
+            {s.tipo === 'ejemplo' && <div className="mb-6"><ExamDrawing sec={s} /></div>}
+            {s.tipo === 'tildes' ? (
+              <div>
+                <div className="exam-pens">
+                  {['A', 'G', 'E'].map((c) => (
+                    <button key={c} data-sfx="none" className={'exam-pen' + (pen === c ? ' on' : '')}
+                            style={{ '--wc': CL[c].c }} onClick={() => { APP.sfx.play('pick'); setPen(c); setWarn(null); }}>
+                      <span className="font-black">{CL[c].pl}</span>
+                      <span className="text-xs font-black opacity-80">{picks[c].length}/{CUPO}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Lápiz elegido: <b style={{ color: CL[pen].c }}>{CL[pen].pl}</b>. Tocá las palabras del texto para marcarlas.
+                </p>
+                {warn && <p className="text-sm font-bold text-rose-600 mt-2 anim-fadeup">{warn}</p>}
+                <TildesTexto sec={s} sil={st.sil} onTap={tapWord} />
+                <div className="grid sm:grid-cols-3 gap-2 mt-4">
+                  {['A', 'G', 'E'].map((c) => (
+                    <div key={c} className="rounded-xl p-3 border-2" style={{ borderColor: CL[c].c }}>
+                      <p className="text-xs font-black uppercase" style={{ color: CL[c].c }}>{CL[c].pl} ({picks[c].length}/{CUPO})</p>
+                      <p className="text-sm font-bold text-slate-700 mt-1 min-h-[1.25rem]">{picks[c].map((t) => t.word).join(', ') || '—'}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {s.items.map((it) => (
+                  <label key={it.id} className="block">
+                    <span className="exam-q"><ItemLabel it={it} /></span>
+                    {it.largo
+                      ? <textarea className="exam-input" rows={3} spellCheck={false} value={st.answers[it.id] || ''}
+                                  onChange={(e) => setAns(it.id, e.target.value)} />
+                      : <input className="exam-input" spellCheck={false} autoComplete="off" value={st.answers[it.id] || ''}
+                               placeholder={it.num ? 'Nombre de la parte ' + it.num : ''}
+                               onChange={(e) => setAns(it.id, e.target.value)} />}
+                  </label>
+                ))}
+              </div>
+            )}
+          </section>
+        ))}
+
+        <div className="card p-5 text-center">
+          {!confirm ? (
+            <button className="btn btn-primary text-lg" data-sfx="none"
+                    onClick={() => (done < max ? (APP.sfx.play('open'), setConfirm(true)) : entregar())}>
+              <i className="fa-solid fa-paper-plane" /> Entregar
+            </button>
+          ) : (
+            <div className="anim-fadeup">
+              <p className="font-black text-rose-600">Te faltan {max - done} respuestas. ¿Entregás igual?</p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center mt-3">
+                <button className="btn btn-ghost" data-sfx="back" onClick={() => setConfirm(false)}>Sigo respondiendo</button>
+                <button className="btn btn-primary" data-sfx="none" onClick={entregar}>Entregar igual</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /** Botones ✓ / ✗ del que corrige. */
+  function MarkBtns({ v, onSet }) {
+    return (
+      <div className="flex gap-2 shrink-0">
+        <button data-sfx="none" className={'mark-btn ok' + (v === true ? ' on' : '')} aria-label="Correcto"
+                onClick={() => { APP.sfx.play('correct'); onSet(true); }}><i className="fa-solid fa-check" /></button>
+        <button data-sfx="none" className={'mark-btn bad' + (v === false ? ' on' : '')} aria-label="Incorrecto"
+                onClick={() => { APP.sfx.play('wrong'); onSet(false); }}><i className="fa-solid fa-xmark" /></button>
+      </div>
+    );
+  }
+
+  /* ------------------------- El adulto corrige -------------------------- */
+  function ExamReview({ ex, st, save, total, onExit, onDone }) {
+    const S = useSubject();
+    const CL = S.EXAM_CLASES, CUPO = S.EXAM_CUPO;
+    const [open, setOpen] = useState(st.nota != null);   // ya corregido antes: directo a la corrección
+    const items = examItems(ex);
+    const sec = silSec(ex);
+    const picks = silPicks(sec, st.sil);
+    const silToks = picks.A.concat(picks.G, picks.E);
+    const need = items.length + silToks.length;
+    const marked = items.filter((it) => st.marks[it.id] != null).length + silToks.filter((t) => st.marks['s' + t.i] != null).length;
+    const correct = items.filter((it) => st.marks[it.id] === true).length + silToks.filter((t) => st.marks['s' + t.i] === true).length;
+    const nt = S.examNota(correct, total);
+
+    const mark = (k, v) => save((p) => ({ marks: Object.assign({}, p.marks, { [k]: v }) }));
+    function sugerir() {
+      const m = {};
+      silToks.forEach((t) => { if (t.cls) m['s' + t.i] = t.cls === st.sil[t.i]; });
+      APP.sfx.play('correct');
+      save((p) => ({ marks: Object.assign({}, p.marks, m) }));
+    }
+
+    if (!open) {
+      return (
+        <div>
+          <GameHeader title={ex.titulo} subtitle="Entregado ✔" onExit={onExit} />
+          <div className="card p-6 sm:p-9 text-center max-w-xl mx-auto anim-pop">
+            <div className="text-6xl anim-floaty">📬</div>
+            <h3 className="text-2xl font-black mt-3">¡Examen entregado!</h3>
+            <p className="text-slate-500 mt-2">Ahora lo tiene que corregir un adulto. Cuando esté corregido… ¡aparece la nota! 🥁</p>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center mt-6">
+              <button className="btn btn-primary" onClick={() => setOpen(true)}><i className="fa-solid fa-user-check" /> Soy el adulto: corregir</button>
+              <button className="btn btn-ghost" data-sfx="back" onClick={() => save({ stage: 'doing' })}><i className="fa-solid fa-pen" /> Volver a responder</button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const rowCls = (v) => 'review-row' + (v === true ? ' is-ok' : v === false ? ' is-bad' : '');
+
+    return (
+      <div className="pb-40">
+        <GameHeader title={'Corrección · ' + ex.titulo} subtitle={'Corregidas ' + marked + ' de ' + need} onExit={onExit}
+                    progress={{ v: marked, m: need }} />
+
+        <div className="card p-4 mb-4 bg-amber-50/70 border-amber-200 flex gap-3 items-start">
+          <i className="fa-solid fa-user-check text-amber-500 text-xl mt-0.5" />
+          <p className="text-sm text-slate-600">
+            <b>Para el adulto:</b> leé cada respuesta y marcá <b className="text-emerald-600">✓</b> o <b className="text-rose-600">✗</b>.
+            La <b>respuesta esperada</b> es una guía: si lo dijo con sus palabras y la idea está bien, vale.
+            Cada respuesta vale 1 punto; las tildes son 15 puntos (5 + 5 + 5).
+          </p>
+        </div>
+
+        {ex.secciones.map((s) => (
+          <section key={s.id} className="card p-4 sm:p-6 mb-4">
+            <h3 className="exam-sec-title">{s.titulo}</h3>
+            {s.tipo === 'ejemplo' && <div className="mb-5 mt-3"><ExamDrawing sec={s} numNames /></div>}
+            {s.tipo === 'tildes' ? (
+              <div>
+                <TildesTexto sec={s} sil={st.sil} />
+                <button className="btn btn-ghost !py-2 text-sm mt-3" data-sfx="none" onClick={sugerir}>
+                  <i className="fa-solid fa-wand-magic-sparkles" /> Marcar según lo que sugiere la app
+                </button>
+                {['A', 'G', 'E'].map((c) => (
+                  <div key={c} className="mt-5">
+                    <p className="font-black" style={{ color: CL[c].c }}>{CL[c].pl} <span className="text-xs text-slate-500 font-bold">· {CL[c].d}</span></p>
+                    <div className="space-y-2 mt-2">
+                      {Array.from({ length: CUPO }, (_, k) => {
+                        const t = picks[c][k];
+                        if (!t) return (
+                          <div key={k} className="review-row is-bad">
+                            <p className="flex-1 text-sm text-slate-500 italic">No marcó la {k + 1}.ª: cuenta como incorrecta.</p>
+                          </div>
+                        );
+                        const v = st.marks['s' + t.i];
+                        const sug = t.cls ? CL[t.cls] : null;
+                        return (
+                          <div key={k} className={rowCls(v)}>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-black text-lg leading-tight">{t.word}</p>
+                              <p className="text-xs text-slate-500">
+                                La app dice: {sug ? <b style={{ color: sug.c }}>{sug.n}</b> : 'no la tiene en su lista'}
+                                {sug && (t.cls === c ? ' ✔' : ' ✘')}
+                              </p>
+                            </div>
+                            <MarkBtns v={v} onSet={(x) => mark('s' + t.i, x)} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3 mt-3">
+                {s.items.map((it) => {
+                  const ans = (st.answers[it.id] || '').trim();
+                  const v = st.marks[it.id];
+                  return (
+                    <div key={it.id} className={rowCls(v)}>
+                      <div className="flex-1 min-w-0">
+                        <p className="exam-q !mb-1"><ItemLabel it={it} /></p>
+                        <p className="review-ans">{ans || <i className="text-slate-400 font-semibold">(sin responder)</i>}</p>
+                        <p className="review-exp"><b>Esperada:</b> {it.esperada}</p>
+                      </div>
+                      <MarkBtns v={v} onSet={(x) => mark(it.id, x)} />
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+        ))}
+
+        <div className="text-center">
+          <button className="btn btn-ghost" data-sfx="back" onClick={() => save({ stage: 'doing' })}>
+            <i className="fa-solid fa-pen" /> Devolverle el examen para que siga respondiendo
+          </button>
+        </div>
+
+        <div className="answer-bar">
+          <div className="max-w-app mx-auto px-4 pt-2 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black">Corregidas {marked}/{need}</p>
+              <p className="text-xs text-slate-500">{correct} bien de {total} puntos</p>
+            </div>
+            <button className="btn btn-primary disabled:opacity-40" disabled={marked < need} data-sfx="none"
+                    onClick={() => onDone(Object.assign({}, nt, { correct: correct, total: total }))}>
+              🥁 Ver la nota
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------------------- ¡La nota! (pantalla completa) ---------------------- */
+  const RAIN = ['🎉', '🏆', '⭐', '🥳', '🎊', '💯', '👏', '🌟', '📚', '✏️', '🤩', '🔥'];
+  function NotaReveal({ nt, onClose, onRecu }) {
+    const S = useSubject();
+    const [phase, setPhase] = useState('roll');   // roll = redoble · show = la nota
+    const [fake, setFake] = useState(5);
+    const rain = useMemo(() => Array.from({ length: 40 }, () => ({
+      e: RAIN[(Math.random() * RAIN.length) | 0],
+      left: Math.random() * 100, delay: Math.random() * 3, dur: 2.6 + Math.random() * 2.6, size: 1.6 + Math.random() * 2
+    })), []);
+
+    useEffect(() => {
+      APP.sfx.duck(true);
+      examAudio.redoble(1.75);
+      const spin = setInterval(() => setFake((Math.random() * 11) | 0), 70);
+      const timers = [];
+      timers.push(setTimeout(() => {
+        clearInterval(spin);
+        setPhase('show');
+        if (nt.aprobado) {
+          examAudio.aprobado();
+          APP.sfx.play('win');
+          APP.vibrate([90, 60, 90, 60, 260]);
+          APP.confetti(280);
+          let k = 0;
+          const burst = setInterval(() => {
+            APP.confetti(90, { x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight * 0.6 });
+            if (++k > 24) clearInterval(burst);
+          }, 300);
+          timers.push(burst);
+          timers.push(setTimeout(() => APP.sfx.play('levelup'), 1700));
+          timers.push(setTimeout(() => decirES('¡Felicitaciones Santi! ¡Aprobaste con ' + notaDicha(nt) + '!'), 2400));
+        } else {
+          APP.sfx.play('lose');
+        }
+      }, 1800));
+      return () => {
+        clearInterval(spin);
+        timers.forEach((t) => { clearTimeout(t); clearInterval(t); });
+        APP.sfx.duck(false);
+        try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) { /* ignorar */ }
+      };
+    }, []);
+
+    const win = phase === 'show' && nt.aprobado;
+    return (
+      <div className={'exam-reveal ' + (phase === 'roll' ? 'roll' : win ? 'win' : 'lose')}>
+        {win && <div className="reveal-rays" />}
+        {win && (
+          <div className="reveal-rain" aria-hidden="true">
+            {rain.map((r, i) => (
+              <span key={i} style={{ left: r.left + '%', animationDelay: r.delay + 's', animationDuration: r.dur + 's', fontSize: r.size + 'rem' }}>{r.e}</span>
+            ))}
+          </div>
+        )}
+        <div className={'relative text-center px-4' + (win ? ' shake-hard' : '')}>
+          {phase === 'roll' ? (
+            <>
+              <p className="reveal-label">🥁 Tu nota es…</p>
+              <p className="reveal-roll">{fake}</p>
+            </>
+          ) : win ? (
+            <>
+              <p className="reveal-label">¡Tu nota es!</p>
+              <p className="reveal-grade">{nt.txt}</p>
+              <div className="reveal-stamp">¡APROBADO!</div>
+              <p className="reveal-sub">🏆 ¡Sos un genio de la Lengua, Santi! 🏆</p>
+              <button className="btn btn-accent mt-7 text-xl !px-8" onClick={onClose}>¡Siiiií! 🎉</button>
+            </>
+          ) : (
+            <div className="card p-6 sm:p-8 max-w-sm mx-auto anim-pop">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Tu nota es</p>
+              <p className="text-8xl font-black text-slate-700 my-2">{nt.txt}</p>
+              <p className="font-black text-lg">Esta vez no alcanzó 💪</p>
+              <p className="text-slate-500 mt-1 text-sm">
+                Para aprobar hace falta un {S.EXAM_APROBADO}. Repasá con los juegos y probá
+                {onRecu ? ' el recuperatorio' : ' otra vez'}: ¡vas a ver que sale!
+              </p>
+              <div className="flex flex-col gap-3 mt-5">
+                {onRecu && <button className="btn btn-primary" onClick={onRecu}><i className="fa-solid fa-rotate" /> Ir al recuperatorio</button>}
+                <button className="btn btn-ghost" data-sfx="back" onClick={onClose}>Cerrar</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  /* ---------------------------- Ya corregido ----------------------------- */
+  function ExamDone({ ex, st, onExit, onReplay, onReview, onReset, onRecu }) {
+    const nt = st.nota;
+    const [sure, setSure] = useState(false);
+    return (
+      <div>
+        <GameHeader title={ex.titulo} subtitle="Corregido" onExit={onExit} />
+        <div className="card p-6 sm:p-9 text-center max-w-xl mx-auto anim-pop">
+          <div className="text-5xl anim-floaty">{nt.aprobado ? '🏆' : '💪'}</div>
+          <p className="text-xs font-black uppercase tracking-widest text-indigo-400 mt-2">Nota final</p>
+          <p className={'text-8xl font-black my-1 ' + (nt.aprobado ? 'text-emerald-600' : 'text-slate-600')}>{nt.txt}</p>
+          <span className={'chip ' + (nt.aprobado ? '!bg-emerald-50 !text-emerald-700 !border-emerald-200' : '!bg-rose-50 !text-rose-700 !border-rose-200')}>
+            {nt.aprobado ? '✅ APROBADO' : '❌ No aprobado'}
+          </span>
+          <p className="text-slate-500 mt-3 text-sm">
+            {nt.correct} respuestas bien de {nt.total} · {nt.raw.toFixed(1).replace('.', ',')} sobre 10
+          </p>
+
+          <div className="flex flex-col gap-3 mt-6">
+            {onRecu && <button className="btn btn-primary" onClick={onRecu}><i className="fa-solid fa-rotate" /> Ir al recuperatorio</button>}
+            <button className="btn btn-accent" data-sfx="none" onClick={onReplay}>🥁 Ver la nota otra vez</button>
+            <button className="btn btn-ghost" onClick={onReview}><i className="fa-solid fa-list-check" /> Ver o cambiar la corrección</button>
+            {!sure
+              ? <button className="btn btn-ghost" onClick={() => setSure(true)}><i className="fa-solid fa-eraser" /> Borrar y hacerlo de nuevo</button>
+              : (
+                <div className="rounded-2xl bg-rose-50 border-2 border-rose-200 p-3">
+                  <p className="text-sm font-black text-rose-700">¿Seguro? Se borran las respuestas y la nota.</p>
+                  <div className="flex gap-2 justify-center mt-2">
+                    <button className="btn btn-ghost !py-2" data-sfx="back" onClick={() => setSure(false)}>No</button>
+                    <button className="btn btn-primary !py-2" onClick={onReset}>Sí, borrar</button>
+                  </div>
+                </div>
+              )}
+            <button className="btn btn-ghost" data-sfx="back" onClick={onExit}><i className="fa-solid fa-house" /> Volver al menú</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  function ExamGame({ id, onExit, onGo }) {
+    const S = useSubject();
+    const ex = S.EXAMENES[id];
+    const ES = S.EXAM_STORE;
+    const total = useMemo(() => S.examTotal(ex), [id]);
+    const [st, setSt] = useState(() => ES.get(id));
+    const [reveal, setReveal] = useState(false);
+    /** Guarda en el estado y en el navegador. `patch` puede ser una función del estado anterior. */
+    const save = useCallback((patch) => setSt((prev) => {
+      const n = Object.assign({}, prev, typeof patch === 'function' ? patch(prev) : patch);
+      ES.set(id, n);
+      return n;
+    }), [id]);
+    useEffect(() => { window.scrollTo({ top: 0, behavior: 'smooth' }); }, [st.stage]);
+
+    const recu = id === 'examen1' ? () => { setReveal(false); onGo('examen2'); } : null;
+
+    if (st.stage === 'doing') return <ExamDoing ex={ex} st={st} save={save} onExit={onExit} />;
+    if (st.stage === 'review' || !st.nota) {
+      return <ExamReview ex={ex} st={st} save={save} total={total} onExit={onExit}
+                         onDone={(nt) => { save({ stage: 'done', nota: nt }); setReveal(true); }} />;
+    }
+    return (
+      <>
+        <ExamDone ex={ex} st={st} onExit={onExit} onReplay={() => setReveal(true)}
+                  onReview={() => save({ stage: 'review' })}
+                  onReset={() => setSt(ES.reset(id))}
+                  onRecu={recu && !st.nota.aprobado ? recu : null} />
+        {reveal && <NotaReveal nt={st.nota} onClose={() => setReveal(false)} onRecu={recu} />}
+      </>
+    );
+  }
+
+  /** Estado del examen para la tarjeta del menú. */
+  function ExamStatus({ id }) {
+    const x = useSubject().EXAM_STORE.get(id);
+    if (x.stage === 'done' && x.nota) {
+      return <span className={'text-xs font-black ' + (x.nota.aprobado ? 'text-emerald-600' : 'text-rose-600')}>
+        Nota: {x.nota.txt} {x.nota.aprobado ? '✅ Aprobado' : '❌'}</span>;
+    }
+    if (x.stage === 'review') return <span className="text-xs font-black text-amber-600">📬 Para corregir</span>;
+    const started = Object.keys(x.answers).some((k) => (x.answers[k] || '').trim()) || Object.keys(x.sil).length;
+    return <span className="text-xs font-bold text-slate-400">{started ? '✏️ En curso' : 'Sin empezar'}</span>;
+  }
+
+  /* ==================================================================
      8 · MENÚ PRINCIPAL
      ================================================================== */
   /** Juegos que dan estrellas (las Flashcards y el Resumen no). */
-  const NO_SCORE = ['resumen', 'cards', 'ejemplos', 'infografias'];
+  const NO_SCORE = ['resumen', 'cards', 'ejemplos', 'infografias', 'examen'];
   const isScored = (g) => NO_SCORE.indexOf(g.type) === -1;
 
   /** Estrellas ganadas en una materia: { total, max }. */
@@ -3124,7 +3723,9 @@
                 <h3 className="font-black text-lg leading-tight">{g.name}</h3>
                 <p className="text-sm text-slate-500 mt-1 flex-1">{g.desc}</p>
                 <div className="flex items-center justify-between mt-4">
-                  {g.type === 'resumen' || g.type === 'ejemplos' || g.type === 'infografias'
+                  {g.type === 'examen'
+                    ? <ExamStatus id={g.id} />
+                    : g.type === 'resumen' || g.type === 'ejemplos' || g.type === 'infografias'
                     ? <span className="text-xs font-bold text-slate-400">Sin puntaje · sólo leer</span>
                     : g.type === 'cards'
                       ? <span className="text-xs font-bold text-amber-600">{knownCount}/{S.FLASHCARDS.length} ya las sé</span>
@@ -3358,6 +3959,7 @@
     else if (game.type === 'infografias') content = <InfografiasView onExit={back} />;
     else if (game.type === 'explicar') content = <ExplicarGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'resumen')  content = <Resumen onExit={back} />;
+    else if (game.type === 'examen')   content = <ExamGame key={game.id} id={game.id} onExit={back} onGo={setScreen} />;
     else if (game.type === 'quiz')     content = <QuizGame key={game.id + nonce} kind={game.id} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'speaking') content = <SpeakingGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
     else if (game.type === 'tellme')   content = <TellMeGame key={nonce} title={game.name} onExit={back} onFinish={(r) => finish(game.id, r)} />;
